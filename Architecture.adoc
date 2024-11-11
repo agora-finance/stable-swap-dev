@@ -1,0 +1,26 @@
+.Roles/Participants
+
+* Users
+* Upgrade Admins
+* Swap Whitelist setter
+* Fee setter
+* Token remover/withdrawer
+* Pair (contract)
+* Oracle (contract)
+* Registry (contract)
+
+= Registry
+
+* erc1967 proxy pattern
+* provides a list of all pairs active
+* allows upgrading the whitelist globally
+
+.Pair 
+
+* provides swap ability between two tokens at a price determined by an oracle
+* provides the ability to swap with a fee, which is set by the fee setter
+* fee is different in each direction
+* has a whitelist for swapping
+* has a whitelist for removing tokens
+* tokens are added by sending them via erc20
+* erc1967 proxy pattern
