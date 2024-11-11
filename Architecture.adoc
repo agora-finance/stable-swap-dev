@@ -1,0 +1,60 @@
+:doctype: book
+
+= Roles/Participants
+
+* Users
+* Admin
+* Whitelist setter
+* Fee setter
+* Token remover/withdrawer
+* Pair (contract)
+* Oracle (contract)
+* Registry (contract)
+
+== Registry
+
+Roles::
+
+admin:::
+* upgrade contract
+* set roles
+whitelister:::
+- calls whitelist function
+bookkeeper:::
+- can add/remove pairs from the list
+Pauser:::
+- pauses all the pairs in one call
+
+Key Functionality::
+* stores all active pairs deployed
+* provides a way to set the whitelist on all pairs
+* views of all pairs
+* views of key info on all the pairs
+    * current fees, tokens, etc
+* upgradeable
+* global pause
+
+== Pair
+Roles::
+admin:::
+* upgrade contract
+* set roles
+whitelister:::
+- sets whitelist for swappers
+Fee setter:::
+- sets the fee
+Token remover:::
+- removes tokens from the pair
+Pauser:::
+- pauses the pair
+
+Key Functionality::
+- proxy pattern
+- allows swaps
+** swap() and swapExactTokensForTokens()
+- adheres to UniV2 interfaces
+- has a whitelist for swapping
+- has a whitelist for removing tokens
+- upgradeable oracle? or maybe just rely on the upgrade of the contract
+- tokens are added by sending them via erc20
+- pausable
