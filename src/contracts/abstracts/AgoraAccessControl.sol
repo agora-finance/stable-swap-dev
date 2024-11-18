@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.21;
+pragma solidity >=0.8.0;
 
 // ====================================================================
 //             _        ______     ___   _______          _
@@ -51,24 +51,19 @@ abstract contract AgoraAccessControl {
     function assignRole(string memory _role, address _newAddress, bool _addRole) external virtual {
         // Checks: Only Admin can transfer role
         _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
-        
+
         // Checks: See if role exists
         bool _roleExists = _getPointerToAgoraAccessControlStorage().roles.contains(bytes32(bytes(_role)));
 
         // Effects: Add role to set if it doesn't exist
-        if (!_roleExists) {
-            _addRoleToSet({ _role: _role });
-        }
+        if (!_roleExists) _addRoleToSet({ _role: _role });
 
         // Effects: Set the roleMembership to the new address
         _setRoleMembership({ _role: _role, _address: _newAddress, _insert: _addRole });
 
         // Emit event
-        if (_addRole) {
-            emit RoleAssigned({ role: _role, address_: _newAddress });
-        } else {
-            emit RoleRevoked({ role: _role, address_: _newAddress });
-        }
+        if (_addRole) emit RoleAssigned({ role: _role, address_: _newAddress });
+        else emit RoleRevoked({ role: _role, address_: _newAddress });
     }
 
     // ============================================================================================
@@ -89,11 +84,8 @@ abstract contract AgoraAccessControl {
     /// @param _address The address of the new role
     /// @param _insert Whether to add or remove the address from the role
     function _setRoleMembership(string memory _role, address _address, bool _insert) internal {
-        if (_insert) {
-            _getPointerToAgoraAccessControlStorage().roleMembership[_role].add(_address);
-        } else {
-            _getPointerToAgoraAccessControlStorage().roleMembership[_role].remove(_address);
-        }
+        if (_insert) _getPointerToAgoraAccessControlStorage().roleMembership[_role].add(_address);
+        else _getPointerToAgoraAccessControlStorage().roleMembership[_role].remove(_address);
     }
 
     // ============================================================================================
@@ -133,11 +125,7 @@ abstract contract AgoraAccessControl {
 
     /// @notice The ```_getPointerToAgoraAccessControlStorage``` function returns a pointer to the AgoraAccessControlStorage struct
     /// @return $ A pointer to the AgoraAccessControlStorage struct
-    function _getPointerToAgoraAccessControlStorage()
-        internal
-        pure
-        returns (AgoraAccessControlStorage storage $)
-    {
+    function _getPointerToAgoraAccessControlStorage() internal pure returns (AgoraAccessControlStorage storage $) {
         /// @solidity memory-safe-assembly
         assembly {
             $.slot := AGORA_ACCESS_CONTROL_STORAGE_SLOT

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: ISC
 pragma solidity ^0.8.19;
 
+import { AgoraStableSwapRegistryAccessControl } from "./AgoraStableSwapRegistryAccessControl.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import { AgoraAccessControl } from "./abstracts/AgoraAccessControl.sol";
 
-contract AgoraStableSwapRegistry is AgoraAccessControl{
+contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @notice a set of the current registered swap addresses
@@ -16,8 +17,12 @@ contract AgoraStableSwapRegistry is AgoraAccessControl{
     // Initialization Function
     //==============================================================================
 
-    function _initialize(address _initialAdminAddress) external {
-        _initializeAgoraAccessControl({ _initialAdminAddress: _initialAdminAddress });
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _initialAdminAddress) external initializer {
+        _initializeAgoraStableSwapRegistryAccessControl({ _initialAdminAddress: _initialAdminAddress });
     }
 
     //==============================================================================
@@ -28,28 +33,29 @@ contract AgoraStableSwapRegistry is AgoraAccessControl{
     /// @param _swapAddress the address of the swap to register
     function setSwapAddress(address _swapAddress, bool _isRegistered) external {
         _requireSenderIsRole({ _role: ADMIN_ROLE });
-        if (_isRegistered) {
-            _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.add(_swapAddress);
-        } else {
-            _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.remove(_swapAddress);
-        }
+        if (_isRegistered) _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.add(_swapAddress);
+        else _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.remove(_swapAddress);
     }
 
     function executeOnRegisteredAddresses(bytes calldata _data) external {
         _requireSenderIsRole({ _role: ADMIN_ROLE });
-        address[] memory _registeredSwapAddresses = _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.values();
+        address[] memory _registeredSwapAddresses = _getPointerToAgoraStableSwapRegistryStorage()
+            .registeredSwapAddresses
+            .values();
         for (uint256 i = 0; i < _registeredSwapAddresses.length; i++) {
             // solhint-disable-next-line avoid-low-level-calls
             (bool success, ) = _registeredSwapAddresses[i].call(_data);
-            if (!success) {
-                revert CallToRegisteredSwapAddressFailed(_registeredSwapAddresses[i]);
-            }
+            if (!success) revert CallToRegisteredSwapAddressFailed(_registeredSwapAddresses[i]);
         }
     }
 
-    function tryExecuteOnRegisteredAddresses(bytes calldata _data) external returns (address[] memory _successfulAddresses, address[] memory _failedAddresses) {
+    function tryExecuteOnRegisteredAddresses(
+        bytes calldata _data
+    ) external returns (address[] memory _successfulAddresses, address[] memory _failedAddresses) {
         _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
-        address[] memory _registeredSwapAddresses = _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.values();
+        address[] memory _registeredSwapAddresses = _getPointerToAgoraStableSwapRegistryStorage()
+            .registeredSwapAddresses
+            .values();
 
         // instantiate the arrays to store the successful and failed addresses
         _successfulAddresses = new address[](_registeredSwapAddresses.length);
@@ -58,11 +64,8 @@ contract AgoraStableSwapRegistry is AgoraAccessControl{
         for (uint256 i = 0; i < _registeredSwapAddresses.length; i++) {
             // solhint-disable-next-line avoid-low-level-calls
             (bool success, ) = _registeredSwapAddresses[i].call(_data);
-            if (!success) {
-                _failedAddresses[i] = (_registeredSwapAddresses[i]);
-            } else {
-                _successfulAddresses[i] = (_registeredSwapAddresses[i]);
-            }
+            if (!success) _failedAddresses[i] = (_registeredSwapAddresses[i]);
+            else _successfulAddresses[i] = (_registeredSwapAddresses[i]);
         }
     }
 

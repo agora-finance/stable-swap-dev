@@ -1,13 +1,17 @@
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import { ITransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+
+struct ConstructorParams {
+    address logic;
+    address proxyAdminAddress;
+    bytes data;
+}
 
 contract AgoraTransparentUpgradeableProxy is ERC1967Proxy {
-
     address private immutable _admin;
 
     /**
@@ -20,8 +24,8 @@ contract AgoraTransparentUpgradeableProxy is ERC1967Proxy {
      * backed by the implementation at `_logic`, and optionally initialized with `_data` as explained in
      * {ERC1967Proxy-constructor}.
      */
-    constructor(address _logic, address _proxyAdminAddress, bytes memory _data) payable ERC1967Proxy(_logic, _data) {
-        _admin = _proxyAdminAddress;
+    constructor(ConstructorParams memory _params) payable ERC1967Proxy(_params.logic, _params.data) {
+        _admin = _params.proxyAdminAddress;
         // Set the storage value and emit an event for ERC-1967 compatibility
         ERC1967Utils.changeAdmin(_admin);
     }
@@ -39,6 +43,6 @@ contract AgoraTransparentUpgradeableProxy is ERC1967Proxy {
             }
         } else {
             super._fallback();
-        }   
+        }
     }
 }
