@@ -44,6 +44,10 @@ contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl {
         token1
     }
 
+    //==============================================================================
+    // Constructor & Initalization Functions
+    //==============================================================================
+
     constructor() {
         _disableInitializers();
     }
@@ -65,6 +69,10 @@ contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl {
         emit RoleAssigned({ role: FEE_SETTER_ROLE, address_: _params.initialFeeSetter });
     }
 
+    //==============================================================================
+    // Modifiers
+    //==============================================================================
+
     modifier nonreentrant() {
         assembly {
             if tload(AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT) {
@@ -80,17 +88,21 @@ contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl {
         }
     }
 
-    event SetPaused(bool isPaused);
+    //==============================================================================
+    // Privileged  Functions
+    //==============================================================================
 
-    function setPaused(bool _isPaused) public {
+    event SetApprovedSwapper(address indexed approvedSwapper, bool isApproved);
+
+    function setApprovedSwapper(address _approvedSwapper, bool _isApproved) public {
         // Checks: Only the fee setter can set the fee
-        _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
+        _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
 
-        // Effects: Set the isPaused state
-        _getPointerToAgoraStableSwapStorage().isPaused = _isPaused;
+        // Effects: Set the isApproved state
+        _setRoleMembership({ _role: APPROVED_SWAPPER, _address: _approvedSwapper, _insert: _isApproved });
 
         // emit event
-        emit SetPaused({ isPaused: _isPaused });
+        emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _isApproved });
     }
 
     event SetTokenPurchaseFee(Token indexed token, uint256 tokenPurchaseFee);
@@ -105,6 +117,34 @@ contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl {
 
         // emit event
         emit SetTokenPurchaseFee({ token: _token, tokenPurchaseFee: _tokenPurchaseFee });
+    }
+
+    event RemoveTokens(address indexed tokenAddress, address indexed to, uint256 amount);
+
+    function removeTokens(address _tokenAddress, address _to, uint256 _amount) external {
+        // Checks: Only the fee setter can set the fee
+        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
+        if (
+            _tokenAddress != _getPointerToAgoraStableSwapStorage().token0 &&
+            _tokenAddress != _getPointerToAgoraStableSwapStorage().token1
+        ) revert("Invalid Token Address");
+        IERC20(_tokenAddress).safeTransfer(_to, _amount);
+
+        // emit event
+        emit RemoveTokens({ tokenAddress: _tokenAddress, to: _to, amount: _amount });
+    }
+
+    event SetPaused(bool isPaused);
+
+    function setPaused(bool _isPaused) public {
+        // Checks: Only the fee setter can set the fee
+        _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
+
+        // Effects: Set the isPaused state
+        _getPointerToAgoraStableSwapStorage().isPaused = _isPaused;
+
+        // emit event
+        emit SetPaused({ isPaused: _isPaused });
     }
 
     function getPrice() public view returns (uint256) {
@@ -208,18 +248,6 @@ contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl {
     }
 
     // function swapExactTokensForTokens
-
-    function recoverErc20(address _tokenAddress, address _to, uint256 _amount) external {
-        // Checks: Only the fee setter can set the fee
-        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
-        if (
-            _tokenAddress != _getPointerToAgoraStableSwapStorage().token0 &&
-            _tokenAddress != _getPointerToAgoraStableSwapStorage().token1
-        ) revert("Invalid Token Address");
-        IERC20(_tokenAddress).safeTransfer(_to, _amount);
-
-        // TODO: emit event
-    }
 
     //==============================================================================
     // View Helper Functions

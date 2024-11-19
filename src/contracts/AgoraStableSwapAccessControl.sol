@@ -16,6 +16,9 @@ contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @notice the PAUSER_ROLE identifier
     string public constant PAUSER_ROLE = "PAUSER_ROLE";
 
+    /// @notice the APPROVED_SWAPPER identifier
+    string public constant APPROVED_SWAPPER = "APPROVED_SWAPPER";
+
     function _initializeAgoraStableSwapAccessControl(address _initialAdminAddress) internal {
         _initializeAgoraAccessControl(_initialAdminAddress);
         // Set the default roles
@@ -23,5 +26,6 @@ contract AgoraStableSwapAccessControl is AgoraAccessControl {
         AgoraAccessControl._addRoleToSet(FEE_SETTER_ROLE);
         AgoraAccessControl._addRoleToSet(TOKEN_REMOVER_ROLE);
         AgoraAccessControl._addRoleToSet(PAUSER_ROLE);
+        AgoraAccessControl._addRoleToSet(APPROVED_SWAPPER);
     }
 }
