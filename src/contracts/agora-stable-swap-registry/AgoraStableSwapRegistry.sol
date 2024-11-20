@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: ISC
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 import { AgoraStableSwapRegistryAccessControl } from "./AgoraStableSwapRegistryAccessControl.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";

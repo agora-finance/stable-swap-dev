@@ -3,8 +3,8 @@ pragma solidity ^0.8.28;
 
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
 
+import { IUniswapV2Callee } from "../interfaces/IUniswapV2Callee.sol";
 import { AgoraStableSwapPairStorage } from "./AgoraStableSwapPairStorage.sol";
-import { IUniswapV2Callee } from "./interfaces/IUniswapV2Callee.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -22,7 +22,7 @@ interface IOracle {
     function getPrice() external view returns (uint256);
 }
 
-contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl, AgoraStableSwapPairStorage {
+contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl, AgoraStableSwapPairStorage {
     using SafeERC20 for IERC20;
 
     uint256 public constant PRECISION = 1e18;

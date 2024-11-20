@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: ISC
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
-import { AgoraAccessControl } from "./abstracts/AgoraAccessControl.sol";
+import { AgoraAccessControl } from "../abstracts/AgoraAccessControl.sol";
 
 contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @notice the WHITELISTER_ROLE identifier

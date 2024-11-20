@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: ISC
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.28;
 
 import { BaseScript } from "../BaseScript.sol";
-import { AgoraStableSwapPair, InitializeParams as AgoraStableSwapPairParams } from "contracts/AgoraStableSwapPair.sol";
+import { AgoraStableSwapPairCore, InitializeParams as AgoraStableSwapPairParams } from "contracts/agora-stable-swap-pair/AgoraStableSwapPairCore.sol";
 
-import { AgoraStableSwapRegistry } from "contracts/AgoraStableSwapRegistry.sol";
+import { AgoraStableSwapRegistry } from "contracts/agora-stable-swap-registry/AgoraStableSwapRegistry.sol";
 import { AgoraProxyAdmin } from "contracts/proxy/AgoraProxyAdmin.sol";
 import { AgoraTransparentUpgradeableProxy, ConstructorParams as AgoraTransparentUpgradeableProxyParams } from "contracts/proxy/AgoraTransparentUpgradeableProxy.sol";
 
@@ -17,12 +17,12 @@ function deployAgoraStableSwapPair(
     address _proxyAdminAddress,
     AgoraStableSwapPairParams memory _agoraStableSwapPairParams
 ) returns (DeployAgoraStableSwapPairReturn memory) {
-    AgoraStableSwapPair _pair = new AgoraStableSwapPair();
+    AgoraStableSwapPairCore _pair = new AgoraStableSwapPairCore();
     AgoraTransparentUpgradeableProxy _pairProxy = new AgoraTransparentUpgradeableProxy(
         AgoraTransparentUpgradeableProxyParams({
             logic: address(_pair),
             proxyAdminAddress: _proxyAdminAddress,
-            data: abi.encodeWithSelector(AgoraStableSwapPair.initialize.selector, _agoraStableSwapPairParams)
+            data: abi.encodeWithSelector(AgoraStableSwapPairCore.initialize.selector, _agoraStableSwapPairParams)
         })
     );
     return
