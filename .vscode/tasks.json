@@ -1,0 +1,21 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "exit",
+      "type": "shell",
+      "command": "exit"
+    },
+    {
+      "label": "formatCurrentFile",
+      "type": "shell",
+      "command": "forge fmt \"${file}\" && npx prettier --config ./.prettierrc.json --write \"${file}\" && exit",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "silent"
+      }
+    }
+  ]
+}

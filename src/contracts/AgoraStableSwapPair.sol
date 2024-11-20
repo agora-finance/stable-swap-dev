@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
 
+import { AgoraStableSwapPairStorage } from "./AgoraStableSwapPairStorage.sol";
 import { IUniswapV2Callee } from "./interfaces/IUniswapV2Callee.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -21,27 +22,67 @@ interface IOracle {
     function getPrice() external view returns (uint256);
 }
 
-contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl {
+contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl, AgoraStableSwapPairStorage {
     using SafeERC20 for IERC20;
 
     uint256 public constant PRECISION = 1e18;
 
-    struct AgoraStableSwapStorage {
-        address token0;
-        address token1;
-        uint256 token0PurchaseFee; // 18 decimals
-        uint256 token1PurchaseFee; // 18 decimals
-        address oracleAddress;
-        address token0OverToken1Price; // given as token1's price in token0
-        uint256 reserve0;
-        uint256 reserve1;
-        uint256 lastBlock;
-        bool isPaused;
-    }
+    // struct AgoraStableSwapStorage {
+    //     address token0;
+    //     address token1;
+    //     uint256 token0PurchaseFee; // 18 decimals
+    //     uint256 token1PurchaseFee; // 18 decimals
+    //     address oracleAddress;
+    //     uint256 token0OverToken1Price; // given as token1's price in token0
+    //     uint256 reserve0;
+    //     uint256 reserve1;
+    //     uint256 lastBlock;
+    //     bool isPaused;
+    // }
 
     enum Token {
         token0,
         token1
+    }
+
+    function token0() public view returns (address) {
+        return _getPointerToAgoraStableSwapStorage().token0;
+    }
+
+    function token1() public view returns (address) {
+        return _getPointerToAgoraStableSwapStorage().token1;
+    }
+
+    function token0PurchaseFee() public view returns (uint256) {
+        return _getPointerToAgoraStableSwapStorage().token0PurchaseFee;
+    }
+
+    function token1PurchaseFee() public view returns (uint256) {
+        return _getPointerToAgoraStableSwapStorage().token1PurchaseFee;
+    }
+
+    function oracleAddress() public view returns (address) {
+        return _getPointerToAgoraStableSwapStorage().oracleAddress;
+    }
+
+    function isPaused() public view returns (bool) {
+        return _getPointerToAgoraStableSwapStorage().isPaused;
+    }
+
+    function token0OverToken1Price() public view returns (uint256) {
+        return _getPointerToAgoraStableSwapStorage().token0OverToken1Price;
+    }
+
+    function reserve0() public view returns (uint256) {
+        return _getPointerToAgoraStableSwapStorage().reserve0;
+    }
+
+    function reserve1() public view returns (uint256) {
+        return _getPointerToAgoraStableSwapStorage().reserve1;
+    }
+
+    function lastBlock() public view returns (uint256) {
+        return _getPointerToAgoraStableSwapStorage().lastBlock;
     }
 
     //==============================================================================
@@ -272,27 +313,4 @@ contract AgoraStableSwapPair is Initializable, AgoraStableSwapAccessControl {
             _amountOut = (_amountIn * (PRECISION - _getPointerToAgoraStableSwapStorage().token0PurchaseFee)) / _price;
         }
     }
-
-    //==============================================================================
-    // Erc 7201: UnstructuredNamespace Storage Functions
-    //==============================================================================
-
-    /// @notice The ```AGORA_STABLE_SWAP_STORAGE_SLOT``` is the storage slot for the AgoraStableSwapStorage struct
-    /// @dev keccak256(abi.encode(uint256(keccak256("AgoraStableSwapStorage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 public constant AGORA_STABLE_SWAP_STORAGE_SLOT =
-        0x8f8de9240b3899c03a31968f466af060ab1c78464aa7ae14941c20fe7917b000;
-
-    /// @notice The ```_getPointerToAgoraStableSwapStorage``` function returns a pointer to the AgoraStableSwapStorage struct
-    /// @return $ A pointer to the AgoraStableSwapStorage struct
-    function _getPointerToAgoraStableSwapStorage() internal pure returns (AgoraStableSwapStorage storage $) {
-        /// @solidity memory-safe-assembly
-        assembly {
-            $.slot := AGORA_STABLE_SWAP_STORAGE_SLOT
-        }
-    }
-
-    /// @notice The ```AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT``` is the storage slot for the re-entrancy lock
-    /// @dev keccak256(abi.encode(uint256(keccak256("AgoraStableSwapStorage.TransientReentrancyLock")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 public constant AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT =
-        0x1c912e2d5b9a8ca13ccf418e7dc8bfe55d8292938ebaef5b3166abbe45f04b00;
 }
