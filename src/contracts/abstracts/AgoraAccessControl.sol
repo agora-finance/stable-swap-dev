@@ -66,11 +66,45 @@ abstract contract AgoraAccessControl {
         else emit RoleRevoked({ role: _role, address_: _newAddress });
     }
 
+    //==============================================================================
+    // View Functions
+    //==============================================================================
+
+    /// @notice The ```hasRole``` function checks if _address has the role
+    /// @param _role The role identifier to check
+    /// @param _address The address to check against the role
+    /// @return Whether or not _address has the role
+    function hasRole(string memory _role, address _address) external view returns (bool) {
+        return _isRole({ _role: _role, _address: _address });
+    }
+
+    /// @notice The ```getRoleMembers``` function returns the members of the role
+    /// @param _role The role identifier to check
+    /// @return _members The members of the role
+    function getRoleMembers(string memory _role) external view returns (address[] memory _members) {
+        EnumerableSet.AddressSet storage _roleMembership = _getPointerToAgoraAccessControlStorage().roleMembership[
+            _role
+        ];
+        _members = _roleMembership.values();
+    }
+
+    /// @notice The ```getAllRoles``` function returns all roles
+    /// @return _roles The roles
+    function getAllRoles() external view returns (string[] memory _roles) {
+        uint256 _length = _getPointerToAgoraAccessControlStorage().roles.length();
+        _roles = new string[](_length);
+        for (uint256 i = 0; i < _length; i++) {
+            _roles[i] = string(abi.encodePacked(_getPointerToAgoraAccessControlStorage().roles.at(i)));
+        }
+    }
+
     // ============================================================================================
     // Internal Effects Functions
     // ============================================================================================
 
     function _addRoleToSet(string memory _role) internal {
+        // Checks: Role name must be shorter than 32 bytes
+        if (bytes(_role).length > 32) revert RoleNameTooLong();
         _getPointerToAgoraAccessControlStorage().roles.add(bytes32(bytes(_role)));
     }
 
@@ -152,4 +186,7 @@ abstract contract AgoraAccessControl {
     /// @notice Emitted when role is transferred
     /// @param role The role identifier
     error AddressIsNotRole(string role);
+
+    /// @notice Emitted when role name is too long
+    error RoleNameTooLong();
 }
