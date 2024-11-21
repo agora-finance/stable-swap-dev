@@ -4,12 +4,11 @@ pragma solidity ^0.8.13;
 import { IOracle } from "../agora-stable-swap-pair/AgoraStableSwapPairCore.sol";
 import "forge-std/console.sol";
 
-contract AgoraCompoundingOracle is IOracle {
+contract AgoraOracle {
     uint256 public constant PRECISION = 1e18;
 
     /// @notice the admin address (price setter)
     address public admin;
-
     /// @notice the compounding factor
     /// @dev the compounding factor is simple interest (APR) per second
     uint256 public compoundingFactor;
@@ -35,10 +34,19 @@ contract AgoraCompoundingOracle is IOracle {
         price = _basePrice;
     }
 
-    function getPrice() external view returns (uint256) {
+    function getCompoundingPrice() external view returns (uint256) {
         // Calculate the time elapsed since the last price update
         uint256 timeElapsed = block.timestamp - lastSetTime;
         // Calculate the compounded price
         return (price + (compoundingFactor * timeElapsed));
+    }
+
+    function setConstantPrice(uint256 _price) public {
+        require(msg.sender == admin, "Caller is not the price setter");
+        price = _price;
+    }
+
+    function getConstantPrice() external view returns (uint256) {
+        return price;
     }
 }
