@@ -2,6 +2,9 @@
 pragma solidity ^0.8.28;
 
 contract AgoraStableSwapPairStorage {
+
+    uint256 private constant PRECISION = 1e18;
+
     //==============================================================================
     // Structs
     //==============================================================================

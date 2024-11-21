@@ -8,6 +8,7 @@ import { AgoraStableSwapPairStorage } from "./AgoraStableSwapPairStorage.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { AgoraCompoundingOracle } from "./AgoraStableSwapCompoundingOracle.sol";
 
 struct InitializeParams {
     address token0;
@@ -22,10 +23,8 @@ interface IOracle {
     function getPrice() external view returns (uint256);
 }
 
-contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl, AgoraStableSwapPairStorage {
+contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl, AgoraCompoundingOracle,  AgoraStableSwapPairStorage {
     using SafeERC20 for IERC20;
-
-    uint256 public constant PRECISION = 1e18;
 
     // struct AgoraStableSwapStorage {
     //     address token0;
@@ -188,10 +187,6 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
         emit SetPaused({ isPaused: _isPaused });
     }
 
-    function getPrice() public view returns (uint256) {
-        return IOracle(_getPointerToAgoraStableSwapStorage().oracleAddress).getPrice();
-    }
-
     function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes calldata _data) external nonreentrant {
         // Force one amountOut to be 0
         if (_amount0Out != 0 && _amount1Out != 0) revert("Invalid Swap Amounts");
@@ -291,36 +286,6 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
 
     // TODO: function swapExactTokensForTokens
 
-    /// @notice Get the slippage based on the reserves with a bounded exponential function
-    /// @param _reserves The number of reserves (in 18 decimals)
-    /// @return The slippage (in 18 decimals)
-    function getBoundedExponentialSlippage(uint256 _reserves) public pure returns (uint256) {
-        uint256 RESERVES_BOUND = 1_000_000 * PRECISION;
-        uint256 MAX_SLIPPAGE = (5 * PRECISION) / 100;
-
-        // If the reserves are greater than 1 million, the slippage is 0
-        if (_reserves >= RESERVES_BOUND) return 0;
-        // Calculate how far we are from the bound (0 to 1 with 18 decimals)
-        uint256 normalizedReserves = _reserves / RESERVES_BOUND;
-
-        // Create exponential curve: slippage = MAX_SLIPPAGE * (1 - x)^2
-        uint256 slippageMultiplier = PRECISION - normalizedReserves;
-        return (slippageMultiplier * slippageMultiplier * MAX_SLIPPAGE) / (PRECISION * PRECISION);
-    }
-
-    /// @notice Get the slippage based on the reserves with a bounded linear function
-    /// @param _reserves The number of reserves (in 18 decimals)
-    /// @return The slippage (in 18 decimals)
-    function getBoundedLinearSlippage(uint256 _reserves) public pure returns (uint256) {
-        uint256 RESERVES_BOUND = 1_000_000 * PRECISION;
-        uint256 MAX_SLIPPAGE = (5 * PRECISION) / 100;
-
-        // If the reserves are greater than 1 million, the slippage is 0
-        if (_reserves >= RESERVES_BOUND) return 0;
-
-        // Calculate the slippage as a linear function of the reserves
-        return (MAX_SLIPPAGE * (RESERVES_BOUND - _reserves)) / RESERVES_BOUND;
-    }
 
     //==============================================================================
     // View Helper Functions
