@@ -204,6 +204,7 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
         uint256 _price = getPrice();
 
         // Check for proper liquidity available
+        // TODO: look into what happens if the reserve is 0 and we want to deposit into that side of the pool.
         if (_amount0Out >= _reserve0 || _amount1Out >= _reserve1) revert("Insufficient Liquidity");
 
         // Send the tokens (you can only send 1)
@@ -288,7 +289,38 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
         _amounts[1] = _amountOut;
     }
 
-    // function swapExactTokensForTokens
+    // TODO: function swapExactTokensForTokens
+
+    /// @notice Get the slippage based on the reserves with a bounded exponential function
+    /// @param _reserves The number of reserves (in 18 decimals)
+    /// @return The slippage (in 18 decimals)
+    function getBoundedExponentialSlippage(uint256 _reserves) public pure returns (uint256) {
+        uint256 RESERVES_BOUND = 1_000_000 * PRECISION;
+        uint256 MAX_SLIPPAGE = (5 * PRECISION) / 100;
+
+        // If the reserves are greater than 1 million, the slippage is 0
+        if (_reserves >= RESERVES_BOUND) return 0;
+        // Calculate how far we are from the bound (0 to 1 with 18 decimals)
+        uint256 normalizedReserves = _reserves / RESERVES_BOUND;
+
+        // Create exponential curve: slippage = MAX_SLIPPAGE * (1 - x)^2
+        uint256 slippageMultiplier = PRECISION - normalizedReserves;
+        return (slippageMultiplier * slippageMultiplier * MAX_SLIPPAGE) / (PRECISION * PRECISION);
+    }
+
+    /// @notice Get the slippage based on the reserves with a bounded linear function
+    /// @param _reserves The number of reserves (in 18 decimals)
+    /// @return The slippage (in 18 decimals)
+    function getBoundedLinearSlippage(uint256 _reserves) public pure returns (uint256) {
+        uint256 RESERVES_BOUND = 1_000_000 * PRECISION;
+        uint256 MAX_SLIPPAGE = (5 * PRECISION) / 100;
+
+        // If the reserves are greater than 1 million, the slippage is 0
+        if (_reserves >= RESERVES_BOUND) return 0;
+
+        // Calculate the slippage as a linear function of the reserves
+        return (MAX_SLIPPAGE * (RESERVES_BOUND - _reserves)) / RESERVES_BOUND;
+    }
 
     //==============================================================================
     // View Helper Functions
