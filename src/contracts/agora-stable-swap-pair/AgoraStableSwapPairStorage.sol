@@ -21,6 +21,7 @@ contract AgoraStableSwapPairStorage {
         uint256 reserve1;
         uint256 lastBlock;
         bool isPaused;
+        address tokenReceiverAddress;
     }
 
     //==============================================================================
@@ -39,6 +40,14 @@ contract AgoraStableSwapPairStorage {
         assembly {
             $.slot := AGORA_STABLE_SWAP_STORAGE_SLOT
         }
+    }
+
+    function _getCopyOfAgoraStableSwapStorage()
+        internal
+        pure
+        returns (AgoraStableSwapStorage memory agoraStableSwapStorage)
+    {
+        agoraStableSwapStorage = _getPointerToAgoraStableSwapStorage();
     }
 
     /// @notice The ```AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT``` is the storage slot for the re-entrancy lock

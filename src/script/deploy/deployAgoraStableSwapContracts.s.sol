@@ -2,11 +2,11 @@
 pragma solidity ^0.8.28;
 
 import { BaseScript } from "../BaseScript.sol";
-import { AgoraStableSwapPairCore, InitializeParams as AgoraStableSwapPairParams } from "contracts/agora-stable-swap-pair/AgoraStableSwapPairCore.sol";
+import { AgoraStableSwapPairCore, InitializeParams as AgoraStableSwapPairParams } from "@contracts/agora-stable-swap-pair/AgoraStableSwapPairCore.sol";
 
-import { AgoraStableSwapRegistry } from "contracts/agora-stable-swap-registry/AgoraStableSwapRegistry.sol";
-import { AgoraProxyAdmin } from "contracts/proxy/AgoraProxyAdmin.sol";
-import { AgoraTransparentUpgradeableProxy, ConstructorParams as AgoraTransparentUpgradeableProxyParams } from "contracts/proxy/AgoraTransparentUpgradeableProxy.sol";
+import { AgoraStableSwapRegistry } from "@contracts/agora-stable-swap-registry/AgoraStableSwapRegistry.sol";
+import { AgoraProxyAdmin } from "@contracts/proxy/AgoraProxyAdmin.sol";
+import { AgoraTransparentUpgradeableProxy, ConstructorParams as AgoraTransparentUpgradeableProxyParams } from "@contracts/proxy/AgoraTransparentUpgradeableProxy.sol";
 
 struct DeployAgoraStableSwapPairReturn {
     address agoraStableSwapPairImplementation;
