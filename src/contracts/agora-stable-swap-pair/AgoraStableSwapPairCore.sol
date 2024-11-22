@@ -4,11 +4,12 @@ pragma solidity ^0.8.28;
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
 
 import { IUniswapV2Callee } from "../interfaces/IUniswapV2Callee.sol";
+
+import { AgoraCompoundingOracle } from "./AgoraStableSwapCompoundingOracle.sol";
 import { AgoraStableSwapPairStorage } from "./AgoraStableSwapPairStorage.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { AgoraCompoundingOracle } from "./AgoraStableSwapCompoundingOracle.sol";
 
 struct InitializeParams {
     address token0;
@@ -19,11 +20,12 @@ struct InitializeParams {
     address initialFeeSetter;
 }
 
-interface IOracle {
-    function getPrice() external view returns (uint256);
-}
-
-contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl, AgoraCompoundingOracle,  AgoraStableSwapPairStorage {
+contract AgoraStableSwapPairCore is
+    Initializable,
+    AgoraStableSwapAccessControl,
+    AgoraCompoundingOracle,
+    AgoraStableSwapPairStorage
+{
     using SafeERC20 for IERC20;
 
     // struct AgoraStableSwapStorage {
@@ -139,7 +141,7 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
         _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
 
         // Effects: Set the isApproved state
-        _setRoleMembership({ _role: APPROVED_SWAPPER, _address: _approvedSwapper, _insert: _isApproved });
+        _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwapper, _addRole: _isApproved });
 
         // emit event
         emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _isApproved });
@@ -170,6 +172,8 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
         ) revert("Invalid Token Address");
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
 
+        // TODO: update reserves
+
         // emit event
         emit RemoveTokens({ tokenAddress: _tokenAddress, to: _to, amount: _amount });
     }
@@ -188,6 +192,7 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
     }
 
     function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes calldata _data) external nonreentrant {
+        _requireSenderIsRole(APPROVED_SWAPPER);
         // Force one amountOut to be 0
         if (_amount0Out != 0 && _amount1Out != 0) revert("Invalid Swap Amounts");
 
@@ -266,8 +271,10 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
         uint256 _amountOut,
         address[] memory _path
     ) external view returns (uint256[] memory _amounts) {
-        address _token0 = _getPointerToAgoraStableSwapStorage().token0;
-        address _token1 = _getPointerToAgoraStableSwapStorage().token1;
+        AgoraStableSwapPairStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+
+        address _token0 = _storage.token0;
+        address _token1 = _storage.token1;
         // enforce parameter sizes
         if (_path.length != 2) revert("Invalid Path");
         // make sure token0 exists in the path
@@ -285,7 +292,6 @@ contract AgoraStableSwapPairCore is Initializable, AgoraStableSwapAccessControl,
     }
 
     // TODO: function swapExactTokensForTokens
-
 
     //==============================================================================
     // View Helper Functions
