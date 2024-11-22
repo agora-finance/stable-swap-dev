@@ -11,7 +11,7 @@ allow_paths = []
 exclude_paths = ["node_modules", "venv", ".venv", "lib"]
 include_paths = ["node_modules", "lib"]
 remappings = [
-    "contracts/=src/contracts/",
+    "@contracts/=src/contracts/",
     "interfaces/=src/contracts/interfaces/",
     "@openzeppelin/=node_modules/@openzeppelin/",
     "ds-test/=node_modules/ds-test/",
@@ -64,7 +64,7 @@ link_format = "vscode://file/{path}:{line}:{col}"
 
 [lsp]
 compilation_delay = 1
-code_lens.enable = false
+code_lens.enable = true
 detectors.enable = false
 
 

@@ -1,27 +1,9 @@
 // SPDX-License-Identifier: ISC
 pragma solidity ^0.8.28;
 
-import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
-
-import { IUniswapV2Callee } from "../interfaces/IUniswapV2Callee.sol";
-
-import { AgoraCompoundingOracle } from "./AgoraStableSwapCompoundingOracle.sol";
-
 import { AgoraStableSwapPairCore } from "./AgoraStableSwapPairCore.sol";
-import { AgoraStableSwapPairStorage } from "./AgoraStableSwapPairStorage.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-struct InitializeParams {
-    address token0;
-    address token1;
-    uint256 token0PurchaseFee;
-    uint256 token1PurchaseFee;
-    address oracleAddress;
-    address initialFeeSetter;
-    address initialTokenReceiver;
-}
 
 contract AgoraStableSwapPair is AgoraStableSwapPairCore {
     using SafeERC20 for IERC20;
@@ -77,31 +59,6 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
 
     function lastBlock() public view returns (uint256) {
         return _getPointerToAgoraStableSwapStorage().lastBlock;
-    }
-
-    //==============================================================================
-    // Constructor & Initalization Functions
-    //==============================================================================
-
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(InitializeParams memory _params) public initializer {
-        // Set the token0 and token1
-        _getPointerToAgoraStableSwapStorage().token0 = _params.token0;
-        _getPointerToAgoraStableSwapStorage().token1 = _params.token1;
-
-        // Set the token0to1Fee and token1to0Fee
-        _getPointerToAgoraStableSwapStorage().token0PurchaseFee = _params.token0PurchaseFee;
-        _getPointerToAgoraStableSwapStorage().token1PurchaseFee = _params.token1PurchaseFee;
-
-        // Set the oracle address
-        _getPointerToAgoraStableSwapStorage().oracleAddress = _params.oracleAddress;
-
-        // Set the fee setter
-        _setRoleMembership({ _role: FEE_SETTER_ROLE, _address: _params.initialFeeSetter, _insert: true });
-        emit RoleAssigned({ role: FEE_SETTER_ROLE, address_: _params.initialFeeSetter });
     }
 
     function getAmountsOut(
