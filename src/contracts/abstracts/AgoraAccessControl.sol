@@ -52,6 +52,10 @@ abstract contract AgoraAccessControl {
         // Checks: Only Admin can transfer role
         _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
 
+        _assignRole({ _role: _role, _newAddress: _newAddress, _addRole: _addRole });
+    }
+
+    function _assignRole(string memory _role, address _newAddress, bool _addRole) internal {
         // Checks: See if role exists
         bool _roleExists = _getPointerToAgoraAccessControlStorage().roles.contains(bytes32(bytes(_role)));
 
