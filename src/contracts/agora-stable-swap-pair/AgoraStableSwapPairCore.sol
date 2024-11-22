@@ -196,11 +196,13 @@ contract AgoraStableSwapPairCore is
         // Force one amountOut to be 0
         if (_amount0Out != 0 && _amount1Out != 0) revert("Invalid Swap Amounts");
 
+        AgoraStableSwapPairStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+
         // Cache information about the pair for gas savings
-        address _token0 = _getPointerToAgoraStableSwapStorage().token0;
-        address _token1 = _getPointerToAgoraStableSwapStorage().token1;
-        uint256 _reserve0 = _getPointerToAgoraStableSwapStorage().reserve0;
-        uint256 _reserve1 = _getPointerToAgoraStableSwapStorage().reserve1;
+        address _token0 = _storage.token0;
+        address _token1 = _storage.token1;
+        uint256 _reserve0 = _storage.reserve0;
+        uint256 _reserve1 = _storage.reserve1;
         uint256 _price = getPrice();
 
         // Check for proper liquidity available
@@ -232,13 +234,12 @@ contract AgoraStableSwapPairCore is
 
         // Check that we received the correct amount of tokens
         if (_amount0Out > 0) {
-            uint256 _expectedAmount0Out = (_token1In *
-                _price *
-                (1e18 - _getPointerToAgoraStableSwapStorage().token0PurchaseFee)) / PRECISION;
+            // we are sending token0 out, receiving token1 In
+            uint256 _expectedAmount0Out = _getAmount0Out(_token1In, _price, _storage.token0PurchaseFee);
             if (_expectedAmount0Out > _reserve0 - _finalToken0Balance) revert("Invalid Swap");
         } else {
-            uint256 _expectedAmount1Out = (_token0In *
-                (PRECISION - _getPointerToAgoraStableSwapStorage().token1PurchaseFee)) / _price;
+            // we are sending token1 out, receiving token0 in
+            uint256 _expectedAmount1Out = _getAmount1Out(_token0In, _price, _storage.token1PurchaseFee);
             if (_expectedAmount1Out > _reserve1 - _finalToken1Balance) revert("Invalid Swap");
         }
     }
@@ -248,8 +249,6 @@ contract AgoraStableSwapPairCore is
         uint256 _amountIn,
         address[] memory _path
     ) external view returns (uint256[] memory _amounts) {
-        address _token0 = _getPointerToAgoraStableSwapStorage().token0;
-        address _token1 = _getPointerToAgoraStableSwapStorage().token1;
         // enforce parameter sizes
         if (_path.length != 2) revert("Invalid Path");
         // make sure token0 exists in the path
@@ -257,9 +256,19 @@ contract AgoraStableSwapPairCore is
         // make sure token1 exists in the path
         if (_token1 != _path[0] || _token0 != _path[1]) revert("Invalid Path");
 
+        AgoraStableSwapPairStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+
+        address _token0 = _storage.token0;
+        address _token1 = _storage.token1;
+        uint256 _price = getPrice();
+
+
         // path[1] represents our tokenOut
-        Token _tokenOut = _path[1] == _token0 ? Token.token0 : Token.token1;
-        uint256 _amountOut = getAmountOut(_tokenOut, _amountIn);
+        if (_path[1] == _token0) {
+            _amountOut = _getAmount0Out(_amountIn, _price, _storage.token0PurchaseFee);
+        } else {
+            _amountOut = _getAmount1Out(_amountIn, _price, _storage.token1PurchaseFee);
+        }
 
         _amounts = new uint256[](2);
         _amounts[0] = _amountIn;
@@ -271,10 +280,6 @@ contract AgoraStableSwapPairCore is
         uint256 _amountOut,
         address[] memory _path
     ) external view returns (uint256[] memory _amounts) {
-        AgoraStableSwapPairStorage memory _storage = _getPointerToAgoraStableSwapStorage();
-
-        address _token0 = _storage.token0;
-        address _token1 = _storage.token1;
         // enforce parameter sizes
         if (_path.length != 2) revert("Invalid Path");
         // make sure token0 exists in the path
@@ -282,38 +287,77 @@ contract AgoraStableSwapPairCore is
         // make sure token1 exists in the path
         if (_token1 != _path[0] || _token0 != _path[1]) revert("Invalid Path");
 
+        AgoraStableSwapPairStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+
+        address _token0 = _storage.token0;
+        address _token1 = _storage.token1;
+        uint256 _price = getPrice();
+
         // path[0] represents our tokenIn
-        Token _tokenIn = _path[0] == _token0 ? Token.token0 : Token.token1;
-        uint256 _amountIn = getAmountIn(_tokenIn, _amountOut);
+        if (_path[0] == _token0) {
+            _amountIn = _getAmount0In(_amountOut, _price, _storage.token0PurchaseFee);
+        } else {
+            _amountIn = _getAmount1In(_amountOut, _price, _storage.token1PurchaseFee);
+        }
 
         _amounts = new uint256[](2);
         _amounts[0] = _amountIn;
         _amounts[1] = _amountOut;
     }
 
-    // TODO: function swapExactTokensForTokens
+    function swapExactTokensForTokens(
+        uint256 _amountIn,
+        uint256 _amountOutMin,
+        address[] calldata _path,
+        address _to
+    ) external nonreentrant {
+        // TODO: look into implementing deadline here
+        address _empty = address(0);
+        uint256[] memory _amounts = getAmountsOut(_empty, _amountIn, _path);
+        // CHECKS: amountOut must not be smaller than the amountOutMin
+        // NOTE: this assumes no multihopping, otherwise we need to do len()-1 to get final amountOut
+        if (_amounts[1] < _amountOutMin) revert("Insufficient Output Amount");
+
+        // EFFECTS: transfer tokens from msg.sender to this contract
+        IERC20(_path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
+
+        // EFFECTS: swap tokens
+        swap(_amounts[0], _amounts[1], _to, "");
+    }
+
+    function swapTokensForExactTokens(uint256 _amountOut, uint256 _amountInMax, address[] calldata _path, address _to) external nonreentrant {
+        // TODO: implement deadline here?
+        address _empty = address(0);
+        uint256[] memory _amounts = getAmountsIn(_empty, _amountOut, _path);
+        // CHECKS: amountInMax must not be smaller than the amountIn
+        if (_amounts[0] > _amountInMax) revert("Amount In Max Exceeded");
+
+        // EFFECTS: transfer tokens from msg.sender to this contract
+        IERC20(_path[1]).safeTransferFrom(msg.sender, address(this), _amountInMax);
+
+        // EFFECTS: swap tokens
+        swap(_amounts[0], _amounts[1], _to, "");
+    }
 
     //==============================================================================
     // View Helper Functions
     //==============================================================================
 
-    function getAmountIn(Token _tokenIn, uint256 _amountOut) public view returns (uint256 _amountIn) {
-        uint256 _price = getPrice();
-        if (_tokenIn == Token.token0) {
-            _amountIn = (_amountOut * _price) / (PRECISION - _getPointerToAgoraStableSwapStorage().token1PurchaseFee);
-        } else {
-            _amountIn = _amountOut / ((PRECISION - _getPointerToAgoraStableSwapStorage().token0PurchaseFee) * _price);
-        }
+
+    function _getAmount0In(uint256 _amountOut, uint256 _price, uint256 _purchaseFeeToken0) internal pure returns (uint256 _amountIn) {
+        _amountIn = (_amountOut * _price) / ((PRECISION - _purchaseFeeToken0) * PRECISION);
     }
 
-    function getAmountOut(Token _tokenOut, uint256 _amountIn) public view returns (uint256 _amountOut) {
-        uint256 _price = getPrice();
-        if (_tokenOut == Token.token0) {
-            _amountOut =
-                (_amountIn * (PRECISION - _getPointerToAgoraStableSwapStorage().token1PurchaseFee) * _price) /
-                (PRECISION * PRECISION);
-        } else {
-            _amountOut = (_amountIn * (PRECISION - _getPointerToAgoraStableSwapStorage().token0PurchaseFee)) / _price;
-        }
+    function _getAmount1In(uint256 _amountOut, uint256 _price, uint256 _purchaseFeeToken1) internal pure returns (uint256 _amountIn) {
+        _amountIn = _amountOut / ((PRECISION - _purchaseFeeToken1) * _price);
     }
+
+    function _getAmount0Out(uint256 _amountIn, uint256 _price, uint256 _purchaseFeeToken0) internal pure returns (uint256 _amountOut) {
+        _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken0) * _price) /  PRECISION;
+    }
+
+    function _getAmount1Out(uint256 _amountIn, uint256 _price, uint256 _purchaseFeeToken1) internal pure returns (uint256 _amountOut) {
+        _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken1)) / _price;
+    }
+
 }
