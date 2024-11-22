@@ -176,13 +176,18 @@ contract AgoraStableSwapPairCore is
         ) revert("Invalid Token Address");
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
 
-        // TODO: update reserves
+        // Update reserves
+        if (_tokenAddress == _storage.token0) {
+            _getPointerToAgoraStableSwapStorage().reserve0 -= _amount;
+        } else {
+            _getPointerToAgoraStableSwapStorage().reserve1 -= _amount;
+        }
 
         // emit event
         emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
     }
 
-    event AddTokens(address indexed tokenAddress, address indexed from, uint256 amount);
+    event AddTokens(address indexed tokenAddress, uint256 amount);
 
     function addTokens(address _tokenAddress, address _from, uint256 _amount) external {
         // Checks: Only the token adder can add tokens
@@ -197,7 +202,12 @@ contract AgoraStableSwapPairCore is
         ) revert("Invalid Token Address");
         IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
 
-        // TODO: update reserves
+        // Update reserves
+        if (_tokenAddress == _storage.token0) {
+            _getPointerToAgoraStableSwapStorage().reserve0 += _amount;
+        } else {
+            _getPointerToAgoraStableSwapStorage().reserve1 += _amount;
+        }
 
 
         // emit event
