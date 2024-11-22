@@ -161,21 +161,47 @@ contract AgoraStableSwapPairCore is
         emit SetTokenPurchaseFee({ token: _token, tokenPurchaseFee: _tokenPurchaseFee });
     }
 
-    event RemoveTokens(address indexed tokenAddress, address indexed to, uint256 amount);
+    event RemoveTokens(address indexed tokenAddress, uint256 amount);
 
-    function removeTokens(address _tokenAddress, address _to, uint256 _amount) external {
-        // Checks: Only the fee setter can set the fee
+    function removeTokens(address _tokenAddress, uint256 _amount) external {
+        // Checks: Only the token remover can remove tokens
         _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
+
+        AgoraStableSwapPairStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+
+        // address _to =
         if (
-            _tokenAddress != _getPointerToAgoraStableSwapStorage().token0 &&
-            _tokenAddress != _getPointerToAgoraStableSwapStorage().token1
+            _tokenAddress != _storage.token0 &&
+            _tokenAddress != _storage.token1
         ) revert("Invalid Token Address");
         IERC20(_tokenAddress).safeTransfer(_to, _amount);
 
         // TODO: update reserves
 
         // emit event
-        emit RemoveTokens({ tokenAddress: _tokenAddress, to: _to, amount: _amount });
+        emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
+    }
+
+    event AddTokens(address indexed tokenAddress, address indexed from, uint256 amount);
+
+    function addTokens(address _tokenAddress, address _from, uint256 _amount) external {
+        // Checks: Only the token adder can add tokens
+        _requireIsRole({ _role: TOKEN_ADDER_ROLE, _address: msg.sender });
+
+        AgoraStableSwapPairStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+
+        // address _to =
+        if (
+            _tokenAddress != _storage.token0 &&
+            _tokenAddress != _storage.token1
+        ) revert("Invalid Token Address");
+        IERC20(_tokenAddress).safeTransferFrom(_from, address(this), _amount);
+
+        // TODO: update reserves
+
+
+        // emit event
+        emit RemoveTokens({ tokenAddress: _tokenAddress, from: _from, amount: _amount });
     }
 
     event SetPaused(bool isPaused);

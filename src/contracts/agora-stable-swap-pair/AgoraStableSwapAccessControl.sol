@@ -13,6 +13,9 @@ contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @notice the TOKEN_REMOVER_ROLE identifier
     string public constant TOKEN_REMOVER_ROLE = "TOKEN_REMOVER_ROLE";
 
+    /// @notice the TOKEN_ADDER_ROLE identifier
+    string public constant TOKEN_ADDER_ROLE = "TOKEN_ADDER_ROLE";
+
     /// @notice the PAUSER_ROLE identifier
     string public constant PAUSER_ROLE = "PAUSER_ROLE";
 
@@ -28,6 +31,7 @@ contract AgoraStableSwapAccessControl is AgoraAccessControl {
         AgoraAccessControl._addRoleToSet(WHITELISTER_ROLE);
         AgoraAccessControl._addRoleToSet(FEE_SETTER_ROLE);
         AgoraAccessControl._addRoleToSet(TOKEN_REMOVER_ROLE);
+        AgoraAccessControl._addRoleToSet(TOKEN_ADDER_ROLE);
         AgoraAccessControl._addRoleToSet(PAUSER_ROLE);
         AgoraAccessControl._addRoleToSet(APPROVED_SWAPPER);
         AgoraAccessControl._addRoleToSet(PRICE_SETTER_ROLE);
