@@ -11,16 +11,6 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-struct InitializeParams {
-    address token0;
-    address token1;
-    uint256 token0PurchaseFee;
-    uint256 token1PurchaseFee;
-    address oracleAddress;
-    address initialFeeSetter;
-    address initialTokenReceiver;
-}
-
 contract AgoraStableSwapPairCore is
     Initializable,
     AgoraStableSwapAccessControl,
@@ -28,89 +18,6 @@ contract AgoraStableSwapPairCore is
     AgoraStableSwapPairStorage
 {
     using SafeERC20 for IERC20;
-
-    // struct AgoraStableSwapStorage {
-    //     address token0;
-    //     address token1;
-    //     uint256 token0PurchaseFee; // 18 decimals
-    //     uint256 token1PurchaseFee; // 18 decimals
-    //     address oracleAddress;
-    //     uint256 token0OverToken1Price; // given as token1's price in token0
-    //     uint256 reserve0;
-    //     uint256 reserve1;
-    //     uint256 lastBlock;
-    //     bool isPaused;
-    // }
-
-    enum Token {
-        token0,
-        token1
-    }
-
-    function token0() public view returns (address) {
-        return _getPointerToAgoraStableSwapStorage().token0;
-    }
-
-    function token1() public view returns (address) {
-        return _getPointerToAgoraStableSwapStorage().token1;
-    }
-
-    function token0PurchaseFee() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().token0PurchaseFee;
-    }
-
-    function token1PurchaseFee() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().token1PurchaseFee;
-    }
-
-    function oracleAddress() public view returns (address) {
-        return _getPointerToAgoraStableSwapStorage().oracleAddress;
-    }
-
-    function isPaused() public view returns (bool) {
-        return _getPointerToAgoraStableSwapStorage().isPaused;
-    }
-
-    function token0OverToken1Price() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().token0OverToken1Price;
-    }
-
-    function reserve0() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().reserve0;
-    }
-
-    function reserve1() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().reserve1;
-    }
-
-    function lastBlock() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().lastBlock;
-    }
-
-    //==============================================================================
-    // Constructor & Initalization Functions
-    //==============================================================================
-
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(InitializeParams memory _params) public initializer {
-        // Set the token0 and token1
-        _getPointerToAgoraStableSwapStorage().token0 = _params.token0;
-        _getPointerToAgoraStableSwapStorage().token1 = _params.token1;
-
-        // Set the token0to1Fee and token1to0Fee
-        _getPointerToAgoraStableSwapStorage().token0PurchaseFee = _params.token0PurchaseFee;
-        _getPointerToAgoraStableSwapStorage().token1PurchaseFee = _params.token1PurchaseFee;
-
-        // Set the oracle address
-        _getPointerToAgoraStableSwapStorage().oracleAddress = _params.oracleAddress;
-
-        // Set the fee setter
-        _setRoleMembership({ _role: FEE_SETTER_ROLE, _address: _params.initialFeeSetter, _insert: true });
-        emit RoleAssigned({ role: FEE_SETTER_ROLE, address_: _params.initialFeeSetter });
-    }
 
     //==============================================================================
     // Modifiers
@@ -132,110 +39,93 @@ contract AgoraStableSwapPairCore is
     }
 
     //==============================================================================
-    // Privileged  Functions
+    // Internal Helper Functions
     //==============================================================================
 
-    event SetTokenReceiver(address indexed tokenReceiver);
-
-    function setTokenReceiver(address _tokenReceiver) public {
-        // Checks: Only the admin can set the token receiver
-        _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
-
-        // Effects: Set the token receiver
-        _getPointerToAgoraStableSwapStorage().tokenReceiverAddress = _tokenReceiver;
-
-        // emit event
-        emit SetTokenReceiver({ tokenReceiver: _tokenReceiver });
+    function _getAmount0In(
+        uint256 _amountOut,
+        uint256 _price,
+        uint256 _purchaseFeeToken0
+    ) internal pure returns (uint256 _amountIn) {
+        _amountIn = (_amountOut * _price) / ((PRECISION - _purchaseFeeToken0) * PRECISION);
     }
 
-    event SetApprovedSwapper(address indexed approvedSwapper, bool isApproved);
-
-    function setApprovedSwapper(address _approvedSwapper, bool _isApproved) public {
-        // Checks: Only the fee setter can set the fee
-        _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
-
-        // Effects: Set the isApproved state
-        _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwapper, _addRole: _isApproved });
-
-        // emit event
-        emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _isApproved });
+    function _getAmount1In(
+        uint256 _amountOut,
+        uint256 _price,
+        uint256 _purchaseFeeToken1
+    ) internal pure returns (uint256 _amountIn) {
+        _amountIn = _amountOut / ((PRECISION - _purchaseFeeToken1) * _price);
     }
 
-    event SetTokenPurchaseFee(Token indexed token, uint256 tokenPurchaseFee);
-
-    function setTokenPurchaseFee(Token _token, uint256 _tokenPurchaseFee) public {
-        // Checks: Only the fee setter can set the fee
-        _requireIsRole({ _role: FEE_SETTER_ROLE, _address: msg.sender });
-
-        // Effects: Set the token1to0Fee
-        if (_token == Token.token0) _getPointerToAgoraStableSwapStorage().token0PurchaseFee = _tokenPurchaseFee;
-        else _getPointerToAgoraStableSwapStorage().token1PurchaseFee = _tokenPurchaseFee;
-
-        // emit event
-        emit SetTokenPurchaseFee({ token: _token, tokenPurchaseFee: _tokenPurchaseFee });
+    function _getAmount0Out(
+        uint256 _amountIn,
+        uint256 _price,
+        uint256 _purchaseFeeToken0
+    ) internal pure returns (uint256 _amountOut) {
+        _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken0) * _price) / PRECISION;
     }
 
-    event RemoveTokens(address indexed tokenAddress, uint256 amount);
-
-    function removeTokens(address _tokenAddress, uint256 _amount) external {
-        // Checks: Only the token remover can remove tokens
-        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
-
-        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
-
-        if (
-            _tokenAddress != _storage.token0 &&
-            _tokenAddress != _storage.token1
-        ) revert("Invalid Token Address");
-
-        // address _to =
-        IERC20(_tokenAddress).safeTransfer(_storage.tokenReceiverAddress, _amount);
-
-        // Update reserves
-        if (_tokenAddress == _storage.token0) {
-            _getPointerToAgoraStableSwapStorage().reserve0 -= _amount;
-        } else {
-            _getPointerToAgoraStableSwapStorage().reserve1 -= _amount;
-        }
-
-        // emit event
-        emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
+    function _getAmount1Out(
+        uint256 _amountIn,
+        uint256 _price,
+        uint256 _purchaseFeeToken1
+    ) internal pure returns (uint256 _amountOut) {
+        _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken1)) / _price;
     }
 
-    event AddTokens(address indexed tokenAddress, uint256 amount);
+    function _getAmountsOut(
+        uint256 _amountIn,
+        address[] memory _path,
+        address _token0,
+        address _token1,
+        uint256 _token0PurchaseFee,
+        uint256 _token1PurchaseFee,
+        uint256 _token0OverToken1Price
+    ) internal pure returns (uint256[] memory _amounts) {
+        // enforce parameter sizes
+        if (_path.length != 2) revert InvalidPath();
+        // make sure token0 exists in the path
+        if (_token0 != _path[0] || _token1 != _path[1]) revert InvalidPath();
+        // make sure token1 exists in the path
+        if (_token1 != _path[0] || _token0 != _path[1]) revert InvalidPath();
 
-    function addTokens(address _tokenAddress, uint256 _amount) external {
-        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+        _amounts = new uint256[](2);
+        _amounts[0] = _amountIn;
 
-        if (
-            _tokenAddress != _storage.token0 &&
-            _tokenAddress != _storage.token1
-        ) revert("Invalid Token Address");
-        IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
-
-        // Update reserves
-        if (_tokenAddress == _storage.token0) {
-            _getPointerToAgoraStableSwapStorage().reserve0 += _amount;
-        } else {
-            _getPointerToAgoraStableSwapStorage().reserve1 += _amount;
-        }
-
-        // emit event
-        emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
+        // path[1] represents our tokenOut
+        if (_path[1] == _token0) _amounts[1] = _getAmount0Out(_amountIn, _token0OverToken1Price, _token0PurchaseFee);
+        else _amounts[1] = _getAmount1Out(_amountIn, _token0OverToken1Price, _token1PurchaseFee);
     }
 
-    event SetPaused(bool isPaused);
+    function _getAmountsIn(
+        uint256 _amountOut,
+        address[] memory _path,
+        address _token0,
+        address _token1,
+        uint256 _token0PurchaseFee,
+        uint256 _token1PurchaseFee,
+        uint256 _token0OverToken1Price
+    ) internal pure returns (uint256[] memory _amounts) {
+        // enforce parameter sizes
+        if (_path.length != 2) revert InvalidPath();
+        // make sure token0 exists in the path
+        if (_token0 != _path[0] || _token1 != _path[1]) revert InvalidPath();
+        // make sure token1 exists in the path
+        if (_token1 != _path[0] || _token0 != _path[1]) revert InvalidPath();
 
-    function setPaused(bool _isPaused) public {
-        // Checks: Only the fee setter can set the fee
-        _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
+        _amounts = new uint256[](2);
+        // set the amountOut
+        _amounts[1] = _amountOut;
 
-        // Effects: Set the isPaused state
-        _getPointerToAgoraStableSwapStorage().isPaused = _isPaused;
-
-        // emit event
-        emit SetPaused({ isPaused: _isPaused });
+        // path[0] represents our tokenIn
+        if (_path[0] == _token0) _amounts[0] = _getAmount0In(_amountOut, _token0OverToken1Price, _token0PurchaseFee);
+        else _amounts[0] = _getAmount1In(_amountOut, _token0OverToken1Price, _token1PurchaseFee);
     }
+
+    //==============================================================================
+    // External Stateful Functions
+    //==============================================================================
 
     function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes memory _data) public nonreentrant {
         _requireSenderIsRole(APPROVED_SWAPPER);
@@ -293,62 +183,6 @@ contract AgoraStableSwapPairCore is
         _sync(_finalToken0Balance, _finalToken1Balance);
     }
 
-    function getAmountsOut(
-        address _empty,
-        uint256 _amountIn,
-        address[] memory _path
-    ) public view returns (uint256[] memory _amounts) {
-        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
-        
-        // enforce parameter sizes
-        if (_path.length != 2) revert("Invalid Path");
-        // make sure token0 exists in the path
-        if (_storage.token0 != _path[0] || _storage.token1 != _path[1]) revert("Invalid Path");
-        // make sure token1 exists in the path
-        if (_storage.token1 != _path[0] || _storage.token0 != _path[1]) revert("Invalid Path");
-
-
-        uint256 _price = getPrice();
-
-        _amounts = new uint256[](2);
-        _amounts[0] = _amountIn;
-
-        // path[1] represents our tokenOut
-        if (_path[1] == _storage.token0) {
-            _amounts[1] = _getAmount0Out(_amountIn, _price, _storage.token0PurchaseFee);
-        } else {
-            _amounts[1] = _getAmount1Out(_amountIn, _price, _storage.token1PurchaseFee);
-        }
-    }
-
-    function getAmountsIn(
-        address _empty,
-        uint256 _amountOut,
-        address[] memory _path
-    ) public view returns (uint256[] memory _amounts) {
-        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
-        // enforce parameter sizes
-        if (_path.length != 2) revert("Invalid Path");
-        // make sure token0 exists in the path
-        if (_storage.token0 != _path[0] || _storage.token1 != _path[1]) revert("Invalid Path");
-        // make sure token1 exists in the path
-        if (_storage.token1 != _path[0] || _storage.token0 != _path[1]) revert("Invalid Path");
-
-
-        uint256 _price = getPrice();
-
-        _amounts = new uint256[](2);
-        // set the amountOut
-        _amounts[1] = _amountOut;
-
-        // path[0] represents our tokenIn
-        if (_path[0] == _storage.token0) {
-            _amounts[0] = _getAmount0In(_amountOut, _price, _storage.token0PurchaseFee);
-        } else {
-            _amounts[0] = _getAmount1In(_amountOut, _price, _storage.token1PurchaseFee);
-        }
-    }
-
     function swapExactTokensForTokens(
         uint256 _amountIn,
         uint256 _amountOutMin,
@@ -356,9 +190,21 @@ contract AgoraStableSwapPairCore is
         address _to,
         uint256 _deadline
     ) external nonreentrant {
-        // checks: block.timestamp must be less than deadline
+        // CHECKS: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert("Deadline Passed");
-        uint256[] memory _amounts = getAmountsOut(address(0), _amountIn, _path);
+
+        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+        uint256 _token0OverToken1Price = getPrice();
+
+        uint256[] memory _amounts = _getAmountsOut({
+            _amountIn: _amountIn,
+            _path: _path,
+            _token0: _storage.token0,
+            _token1: _storage.token1,
+            _token0PurchaseFee: _storage.token0PurchaseFee,
+            _token1PurchaseFee: _storage.token1PurchaseFee,
+            _token0OverToken1Price: _token0OverToken1Price
+        });
         // CHECKS: amountOut must not be smaller than the amountOutMin
         if (_amounts[1] < _amountOutMin) revert("Insufficient Output Amount");
 
@@ -369,10 +215,28 @@ contract AgoraStableSwapPairCore is
         swap(_amounts[0], _amounts[1], _to, new bytes(0));
     }
 
-    function swapTokensForExactTokens(uint256 _amountOut, uint256 _amountInMax, address[] memory _path, address _to, uint256 _deadline) external nonreentrant {
-        // Checks: block.timestamp must be less than deadline       
+    function swapTokensForExactTokens(
+        uint256 _amountOut,
+        uint256 _amountInMax,
+        address[] memory _path,
+        address _to,
+        uint256 _deadline
+    ) external nonreentrant {
+        // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert("Deadline Passed");
-        uint256[] memory _amounts = getAmountsIn(address(0), _amountOut, _path);
+
+        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+        uint256 _token0OverToken1Price = getPrice();
+
+        uint256[] memory _amounts = _getAmountsIn({
+            _amountOut: _amountOut,
+            _path: _path,
+            _token0: _storage.token0,
+            _token1: _storage.token1,
+            _token0PurchaseFee: _storage.token0PurchaseFee,
+            _token1PurchaseFee: _storage.token1PurchaseFee,
+            _token0OverToken1Price: _token0OverToken1Price
+        });
         // CHECKS: amountInMax must be larger or equal to than the amountIn
         if (_amounts[0] > _amountInMax) revert("Amount In Max Exceeded");
 
@@ -389,30 +253,121 @@ contract AgoraStableSwapPairCore is
     }
 
     function _sync(uint256 _token0balance, uint256 _token1Balance) internal {
-        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
         _getPointerToAgoraStableSwapStorage().reserve0 = _token0balance;
         _getPointerToAgoraStableSwapStorage().reserve1 = _token1Balance;
     }
 
     //==============================================================================
-    // View Helper Functions
+    // Privileged Configuration Functions
     //==============================================================================
 
+    event SetTokenReceiver(address indexed tokenReceiver);
 
-    function _getAmount0In(uint256 _amountOut, uint256 _price, uint256 _purchaseFeeToken0) internal pure returns (uint256 _amountIn) {
-        _amountIn = (_amountOut * _price) / ((PRECISION - _purchaseFeeToken0) * PRECISION);
+    function setTokenReceiver(address _tokenReceiver) public {
+        // Checks: Only the admin can set the token receiver
+        _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
+
+        // Effects: Set the token receiver
+        _getPointerToAgoraStableSwapStorage().tokenReceiverAddress = _tokenReceiver;
+
+        // emit event
+        emit SetTokenReceiver({ tokenReceiver: _tokenReceiver });
     }
 
-    function _getAmount1In(uint256 _amountOut, uint256 _price, uint256 _purchaseFeeToken1) internal pure returns (uint256 _amountIn) {
-        _amountIn = _amountOut / ((PRECISION - _purchaseFeeToken1) * _price);
+    event SetApprovedSwapper(address indexed approvedSwapper, bool isApproved);
+
+    function setApprovedSwapper(address _approvedSwapper, bool _isApproved) public {
+        // Checks: Only the fee setter can set the fee
+        _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
+
+        // Effects: Set the isApproved state
+        _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwapper, _addRole: _isApproved });
+
+        // emit event
+        emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _isApproved });
     }
 
-    function _getAmount0Out(uint256 _amountIn, uint256 _price, uint256 _purchaseFeeToken0) internal pure returns (uint256 _amountOut) {
-        _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken0) * _price) /  PRECISION;
+    event SetTokenPurchaseFee(address indexed token, uint256 tokenPurchaseFee);
+
+    function setTokenPurchaseFee(address _token, uint256 _tokenPurchaseFee) public {
+        // Checks: Only the fee setter can set the fee
+        _requireIsRole({ _role: FEE_SETTER_ROLE, _address: msg.sender });
+
+        // Effects: Set the token1to0Fee
+        if (_token == _getPointerToAgoraStableSwapStorage().token0) {
+            _getPointerToAgoraStableSwapStorage().token0PurchaseFee = _tokenPurchaseFee;
+        } else {
+            _getPointerToAgoraStableSwapStorage().token1PurchaseFee = _tokenPurchaseFee;
+        }
+
+        // emit event
+        emit SetTokenPurchaseFee({ token: _token, tokenPurchaseFee: _tokenPurchaseFee });
     }
 
-    function _getAmount1Out(uint256 _amountIn, uint256 _price, uint256 _purchaseFeeToken1) internal pure returns (uint256 _amountOut) {
-        _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken1)) / _price;
+    event RemoveTokens(address indexed tokenAddress, uint256 amount);
+
+    function removeTokens(address _tokenAddress, uint256 _amount) external {
+        // Checks: Only the token remover can remove tokens
+        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
+
+        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+
+        if (_tokenAddress != _storage.token0 && _tokenAddress != _storage.token1) {
+            revert InvalidTokenAddress({ token: _tokenAddress });
+        }
+
+        IERC20(_tokenAddress).safeTransfer(_storage.tokenReceiverAddress, _amount);
+
+        // Update reserves
+        if (_tokenAddress == _storage.token0) _getPointerToAgoraStableSwapStorage().reserve0 -= _amount;
+        else _getPointerToAgoraStableSwapStorage().reserve1 -= _amount;
+
+        // emit event
+        emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
     }
 
+    event AddTokens(address indexed tokenAddress, address from, uint256 amount);
+
+    function addTokens(address _tokenAddress, uint256 _amount) external {
+        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+
+        if (_tokenAddress != _storage.token0 && _tokenAddress != _storage.token1) {
+            revert InvalidTokenAddress({ token: _tokenAddress });
+        }
+        IERC20(_tokenAddress).safeTransferFrom(msg.sender, address(this), _amount);
+
+        // Update reserves
+        if (_tokenAddress == _storage.token0) _getPointerToAgoraStableSwapStorage().reserve0 += _amount;
+        else _getPointerToAgoraStableSwapStorage().reserve1 += _amount;
+
+        // emit event
+        emit AddTokens({ tokenAddress: _tokenAddress, from: msg.sender, amount: _amount });
+    }
+
+    event SetPaused(bool isPaused);
+
+    function setPaused(bool _isPaused) public {
+        // Checks: Only the fee setter can set the fee
+        _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
+
+        // Effects: Set the isPaused state
+        _getPointerToAgoraStableSwapStorage().isPaused = _isPaused;
+
+        // emit event
+        emit SetPaused({ isPaused: _isPaused });
+    }
+
+    // ============================================================================================
+    // Errors
+    // ============================================================================================
+
+    /// @notice Emitted when an invalid token is passed to a function
+    /// @param token The address of the token that was invalid
+    error InvalidTokenAddress(address token);
+
+    /// @notice Emitted when an invalid path is passed to a function
+    error InvalidPath();
+
+    /// @notice Emitted when an invalid swap amount is returned from a function
+    error InvalidSwap();
 }

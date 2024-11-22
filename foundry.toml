@@ -14,7 +14,7 @@ out = 'out'
 # The script directory
 script = "src/script"
 # A list of paths to look for libraries in
-libs = ["node_modules"]
+libs = ["node_modules", "lib"]
 # Whether or not to enable `vm.ffi`
 ffi = false
 # Enables or disables the optimizer
