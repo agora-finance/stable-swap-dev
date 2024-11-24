@@ -277,7 +277,7 @@ contract AgoraStableSwapPairCore is
     event SetApprovedSwapper(address indexed approvedSwapper, bool isApproved);
 
     function setApprovedSwapper(address _approvedSwapper, bool _isApproved) public {
-        // Checks: Only the fee setter can set the fee
+        // Checks: Only the whitelister can set the approved swapper
         _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
 
         // Effects: Set the isApproved state
@@ -290,7 +290,7 @@ contract AgoraStableSwapPairCore is
     event SetTokenPurchaseFee(address indexed token, uint256 tokenPurchaseFee);
 
     function setTokenPurchaseFee(address _token, uint256 _tokenPurchaseFee) public {
-        // Checks: Only the fee setter can set the fee
+        // CHECKS: Only the fee setter can set the fee
         _requireIsRole({ _role: FEE_SETTER_ROLE, _address: msg.sender });
 
         // Effects: Set the token1to0Fee
@@ -347,7 +347,7 @@ contract AgoraStableSwapPairCore is
     event SetPaused(bool isPaused);
 
     function setPaused(bool _isPaused) public {
-        // Checks: Only the fee setter can set the fee
+        // Checks: Only the pauser can pause the pair
         _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
 
         // Effects: Set the isPaused state
