@@ -18,6 +18,7 @@ struct InitializeParams {
     uint256 token1PurchaseFee;
     address initialFeeSetter;
     address initialTokenReceiver;
+    address initialAdminAddress;
 }
 
 contract AgoraStableSwapPairCore is
@@ -48,6 +49,9 @@ contract AgoraStableSwapPairCore is
         // Set the fee setter
         _setRoleMembership({ _role: FEE_SETTER_ROLE, _address: _params.initialFeeSetter, _insert: true });
         emit RoleAssigned({ role: FEE_SETTER_ROLE, address_: _params.initialFeeSetter });
+
+        _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
+        _initializeAgoraCompoundingOracle();
     }
 
     //==============================================================================
@@ -78,13 +82,12 @@ contract AgoraStableSwapPairCore is
         if (_path.length != 2) revert InvalidPath();
 
         // Checks: path must contain token0 and token1
-        if (_path[0] == _token0)
+        if (_path[0] == _token0) {
             if (_path[1] != _token1) revert InvalidPath();
-            else if (_path[0] == _token1) {
+            else if (_path[0] == _token1)
                 if (_path[1] != _token0) revert InvalidPath();
-            } else {
-                revert InvalidPath();
-            }
+                else revert InvalidPath();
+        }
     }
 
     function _getAmount0In(
