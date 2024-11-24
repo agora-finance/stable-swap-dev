@@ -69,6 +69,37 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
         }
     }
 
+    function tryWhitelistUserOnRegisteredAddresses(
+        address _address,
+        bool _isApproved
+    ) external returns (address[] memory _successfulAddresses, address[] memory _failedAddresses) {
+        _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
+        address[] memory _registeredSwapAddresses = _getPointerToAgoraStableSwapRegistryStorage()
+            .registeredSwapAddresses
+            .values();
+
+        // get the call data for the whitelist function
+        bytes[] memory _callDataArray = new bytes[](_registeredSwapAddresses.length);
+        for (uint256 i = 0; i < _registeredSwapAddresses.length; i++) {
+            bytes memory setApprovedCallData = abi.encodeWithSignature(
+                "setApprovedSwapper(address, bool)",
+                _address,
+                true
+            );
+            _callDataArray[i] = setApprovedCallData;
+        }
+        // instantiate the arrays to store the successful and failed addresses
+        _successfulAddresses = new address[](_registeredSwapAddresses.length);
+        _failedAddresses = new address[](_registeredSwapAddresses.length);
+
+        for (uint256 i = 0; i < _registeredSwapAddresses.length; i++) {
+            // solhint-disable-next-line avoid-low-level-calls
+            (bool success, ) = _registeredSwapAddresses[i].call(_callDataArray[i]);
+            if (!success) _failedAddresses[i] = (_registeredSwapAddresses[i]);
+            else _successfulAddresses[i] = (_registeredSwapAddresses[i]);
+        }
+    }
+
     //==============================================================================
     // View Functions
     //==============================================================================
