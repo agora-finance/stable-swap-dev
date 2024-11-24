@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: ISC
 pragma solidity ^0.8.28;
 
-import { BaseScript } from "../BaseScript.sol";
-import { AgoraStableSwapPair, InitializeParams as AgoraStableSwapPairParams } from "@contracts/agora-stable-swap-pair/AgoraStableSwapPair.sol";
+import { AgoraStableSwapPair } from "@contracts/agora-stable-swap-pair/AgoraStableSwapPair.sol";
+import { AgoraStableSwapPairCore, InitializeParams as AgoraStableSwapPairParams } from "@contracts/agora-stable-swap-pair/AgoraStableSwapPairCore.sol";
 
 import { AgoraStableSwapRegistry } from "@contracts/agora-stable-swap-registry/AgoraStableSwapRegistry.sol";
-import { AgoraProxyAdmin } from "@contracts/proxy/AgoraProxyAdmin.sol";
 import { AgoraTransparentUpgradeableProxy, ConstructorParams as AgoraTransparentUpgradeableProxyParams } from "@contracts/proxy/AgoraTransparentUpgradeableProxy.sol";
 
 struct DeployAgoraStableSwapPairReturn {
@@ -22,7 +21,7 @@ function deployAgoraStableSwapPair(
         AgoraTransparentUpgradeableProxyParams({
             logic: address(_pair),
             proxyAdminAddress: _proxyAdminAddress,
-            data: abi.encodeWithSelector(AgoraStableSwapPair.initialize.selector, _agoraStableSwapPairParams)
+            data: abi.encodeWithSelector(AgoraStableSwapPairCore.initialize.selector, _agoraStableSwapPairParams)
         })
     );
     return
