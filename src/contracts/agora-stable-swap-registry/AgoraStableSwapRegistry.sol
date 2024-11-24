@@ -84,7 +84,7 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
             bytes memory setApprovedCallData = abi.encodeWithSignature(
                 "setApprovedSwapper(address, bool)",
                 _address,
-                true
+                _isApproved
             );
             _callDataArray[i] = setApprovedCallData;
         }
