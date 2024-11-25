@@ -165,7 +165,9 @@ contract AgoraStableSwapPairCore is
     function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes memory _data) public nonreentrant {
         _requireSenderIsRole(APPROVED_SWAPPER);
         // Force one amountOut to be 0
-        if (_amount0Out != 0 && _amount1Out != 0) revert("Invalid Swap Amounts");
+        if (_amount0Out != 0 && _amount1Out != 0) {
+            revert InvalidSwapAmounts({ message: "Both amounts cannot be non-zero" });
+        }
 
         AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
 
@@ -178,7 +180,7 @@ contract AgoraStableSwapPairCore is
 
         // Check for proper liquidity available
         // TODO: look into what happens if the reserve is 0 and we want to deposit into that side of the pool.
-        if (_amount0Out >= _reserve0 || _amount1Out >= _reserve1) revert("Insufficient Liquidity");
+        if (_amount0Out >= _reserve0 || _amount1Out >= _reserve1) revert InsufficientLiquidity();
 
         // Send the tokens (you can only send 1)
         if (_amount0Out > 0) IERC20(_token0).safeTransfer(_to, _amount0Out);
@@ -201,17 +203,29 @@ contract AgoraStableSwapPairCore is
         uint256 _token1In = _finalToken1Balance > _reserve1 ? _finalToken1Balance - _reserve1 : 0;
 
         // Check we received some tokens
-        if (_token0In == 0 && _token1In == 0) revert("No Tokens Received");
+        if (_token0In == 0 && _token1In == 0) revert NoTokensReceived();
 
         // Check that we received the correct amount of tokens
         if (_amount0Out > 0) {
             // we are sending token0 out, receiving token1 In
             uint256 _expectedAmount0Out = _getAmount0Out(_token1In, _price, _storage.token0PurchaseFee);
-            if (_expectedAmount0Out > _reserve0 - _finalToken0Balance) revert("Invalid Swap");
+            if (_expectedAmount0Out > _reserve0 - _finalToken0Balance) {
+                revert InvalidAmount({
+                    message: "Amount0Out exceeds maximum allowed",
+                    provided: _expectedAmount0Out,
+                    maximum: _reserve0 - _finalToken0Balance
+                });
+            }
         } else {
             // we are sending token1 out, receiving token0 in
             uint256 _expectedAmount1Out = _getAmount1Out(_token0In, _price, _storage.token1PurchaseFee);
-            if (_expectedAmount1Out > _reserve1 - _finalToken1Balance) revert("Invalid Swap");
+            if (_expectedAmount1Out > _reserve1 - _finalToken1Balance) {
+                revert InvalidAmount({
+                    message: "Amount1Out exceeds maximum allowed",
+                    provided: _expectedAmount1Out,
+                    maximum: _reserve1 - _finalToken1Balance
+                });
+            }
         }
 
         // Update reserves
@@ -226,7 +240,7 @@ contract AgoraStableSwapPairCore is
         uint256 _deadline
     ) external nonreentrant {
         // CHECKS: block.timestamp must be less than deadline
-        if (_deadline < block.timestamp) revert("Deadline Passed");
+        if (_deadline < block.timestamp) revert DeadlinePassed();
 
         AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
         uint256 _token0OverToken1Price = getPrice();
@@ -241,7 +255,13 @@ contract AgoraStableSwapPairCore is
             _token0OverToken1Price: _token0OverToken1Price
         });
         // CHECKS: amountOut must not be smaller than the amountOutMin
-        if (_amounts[1] < _amountOutMin) revert("Insufficient Output Amount");
+        if (_amounts[1] < _amountOutMin) {
+            revert AmountOutInsufficient({
+                message: "AmountOut is less than the minimum amountOut",
+                provided: _amounts[1],
+                minimum: _amountOutMin
+            });
+        }
 
         // EFFECTS: transfer tokens from msg.sender to this contract
         IERC20(_path[0]).safeTransferFrom(msg.sender, address(this), _amountIn);
@@ -258,7 +278,7 @@ contract AgoraStableSwapPairCore is
         uint256 _deadline
     ) external nonreentrant {
         // Checks: block.timestamp must be less than deadline
-        if (_deadline < block.timestamp) revert("Deadline Passed");
+        if (_deadline < block.timestamp) revert DeadlinePassed();
 
         AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
         uint256 _token0OverToken1Price = getPrice();
@@ -273,7 +293,13 @@ contract AgoraStableSwapPairCore is
             _token0OverToken1Price: _token0OverToken1Price
         });
         // CHECKS: amountInMax must be larger or equal to than the amountIn
-        if (_amounts[0] > _amountInMax) revert("Amount In Max Exceeded");
+        if (_amounts[0] > _amountInMax) {
+            revert AmountInMaxExceeded({
+                message: "AmountInMax is less than the amountIn",
+                provided: _amounts[0],
+                maximum: _amountInMax
+            });
+        }
 
         // EFFECTS: transfer tokens from msg.sender to this contract
         IERC20(_path[1]).safeTransferFrom(msg.sender, address(this), _amountInMax);
@@ -404,5 +430,23 @@ contract AgoraStableSwapPairCore is
     error InvalidPath();
 
     /// @notice Emitted when an invalid swap amount is returned from a function
-    error InvalidSwap();
+    error InvalidAmount(string message, uint256 provided, uint256 maximum);
+
+    /// @notice Emitted when both amounts cannot be non-zero
+    error InvalidSwapAmounts(string message);
+
+    /// @notice Emitted when the deadline is passed
+    error DeadlinePassed();
+
+    /// @notice Emitted when the amountOut is less than the minimum amountOut
+    error AmountOutInsufficient(string message, uint256 provided, uint256 minimum);
+
+    /// @notice Emitted when the amountInMax is less than the amountIn
+    error AmountInMaxExceeded(string message, uint256 provided, uint256 maximum);
+
+    /// @notice Emitted when no tokens are received
+    error NoTokensReceived();
+
+    /// @notice Emitted when the reserve is insufficient
+    error InsufficientLiquidity();
 }
