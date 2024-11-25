@@ -42,8 +42,9 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     //==============================================================================
 
     function _initializeAgoraCompoundingOracle() public {
+        _getPointerToAgoraCompoundingOracleStorage().perSecondInterestRate = uint112(0);
         _getPointerToAgoraCompoundingOracleStorage().lastUpdated = (block.timestamp).toUint32();
-        _requireSenderIsRole({ _role: ADMIN_ROLE });
+        _getPointerToAgoraCompoundingOracleStorage().basePrice = uint112(1e18);
     }
 
     //==============================================================================
