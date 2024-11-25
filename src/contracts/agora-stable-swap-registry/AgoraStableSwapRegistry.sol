@@ -45,7 +45,7 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
         for (uint256 i = 0; i < _registeredSwapAddresses.length; i++) {
             // solhint-disable-next-line avoid-low-level-calls
             (bool success, ) = _registeredSwapAddresses[i].call(_data);
-            if (!success) revert CallToRegisteredSwapAddressFailed(_registeredSwapAddresses[i]);
+            if (!success) revert CallToRegisteredSwapAddressFailed({ swapAddress: _registeredSwapAddresses[i] });
         }
     }
 
