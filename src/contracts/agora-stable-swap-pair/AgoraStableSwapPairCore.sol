@@ -424,6 +424,7 @@ contract AgoraStableSwapPairCore is
     // ============================================================================================
     // Errors
     // ============================================================================================
+    // TODO: dirmes: drop parameters from errors.
 
     /// @notice Emitted when an invalid token is passed to a function
     /// @param token The address of the token that was invalid

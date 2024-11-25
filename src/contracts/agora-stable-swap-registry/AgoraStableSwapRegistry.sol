@@ -5,6 +5,8 @@ import { AgoraStableSwapRegistryAccessControl } from "./AgoraStableSwapRegistryA
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
+import { IAgoraStableSwapPair } from "../interfaces/IAgoraStableSwapPair.sol";
+
 contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -78,28 +80,39 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
             .registeredSwapAddresses
             .values();
 
-        // get the call data for the whitelist function
-        bytes[] memory _callDataArray = new bytes[](_registeredSwapAddresses.length);
-        for (uint256 i = 0; i < _registeredSwapAddresses.length; i++) {
-            bytes memory setApprovedCallData = abi.encodeWithSignature(
-                "setApprovedSwapper(address, bool)",
-                _address,
-                _isApproved
-            );
-            _callDataArray[i] = setApprovedCallData;
-        }
         // instantiate the arrays to store the successful and failed addresses
         _successfulAddresses = new address[](_registeredSwapAddresses.length);
         _failedAddresses = new address[](_registeredSwapAddresses.length);
 
         for (uint256 i = 0; i < _registeredSwapAddresses.length; i++) {
-            // solhint-disable-next-line avoid-low-level-calls
-            (bool success, ) = _registeredSwapAddresses[i].call(_callDataArray[i]);
-            if (!success) _failedAddresses[i] = (_registeredSwapAddresses[i]);
-            else _successfulAddresses[i] = (_registeredSwapAddresses[i]);
+            try IAgoraStableSwapPair(_registeredSwapAddresses[i]).setApprovedSwapper(_address, _isApproved) {
+                _successfulAddresses[i] = (_registeredSwapAddresses[i]);
+            } catch {
+                _failedAddresses[i] = (_registeredSwapAddresses[i]);
+            }
         }
     }
 
+    function tryPauseRegisteredAddresses(
+        bool _setPaused
+    ) external returns (address[] memory _successfulAddresses, address[] memory _failedAddresses) {
+        _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
+        address[] memory _registeredSwapAddresses = _getPointerToAgoraStableSwapRegistryStorage()
+            .registeredSwapAddresses
+            .values();
+
+        // instantiate the arrays to store the successful and failed addresses
+        _successfulAddresses = new address[](_registeredSwapAddresses.length);
+        _failedAddresses = new address[](_registeredSwapAddresses.length);
+
+        for (uint256 i = 0; i < _registeredSwapAddresses.length; i++) {
+            try IAgoraStableSwapPair(_registeredSwapAddresses[i]).setPaused(_setPaused) {
+                _successfulAddresses[i] = (_registeredSwapAddresses[i]);
+            } catch {
+                _failedAddresses[i] = (_registeredSwapAddresses[i]);
+            }
+        }
+    }
     //==============================================================================
     // View Functions
     //==============================================================================
