@@ -26,9 +26,9 @@ contract AgoraStableSwapPairStorage {
     //==============================================================================
 
     /// @notice The ```AGORA_STABLE_SWAP_STORAGE_SLOT``` is the storage slot for the AgoraStableSwapStorage struct
-    /// @dev keccak256(abi.encode(uint256(keccak256("AgoraStableSwapStorage")) - 1)) & ~bytes32(uint256(0xff))
+    /// @dev keccak256(abi.encode(uint256(keccak256("AgoraStableSwapPairStorage")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 public constant AGORA_STABLE_SWAP_STORAGE_SLOT =
-        0x8f8de9240b3899c03a31968f466af060ab1c78464aa7ae14941c20fe7917b000;
+        0x7bec511bd7f6687e2731c8fe683a8e6468bf371b3ebd503eee87dd5465b4a500;
 
     /// @notice The ```_getPointerToAgoraStableSwapStorage``` function returns a pointer to the AgoraStableSwapStorage struct
     /// @return $ A pointer to the AgoraStableSwapStorage struct
