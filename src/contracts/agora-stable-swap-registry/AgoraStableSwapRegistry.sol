@@ -125,6 +125,10 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
         _isRegistered = _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.contains(_account);
     }
 
+    function registeredSwapAddressesLength() external view returns (uint256 _length) {
+        _length = _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.length();
+    }
+
     //==============================================================================
     // Erc 7201: UnstructuredNamespace Storage Functions
     //==============================================================================
