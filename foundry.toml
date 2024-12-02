@@ -6,7 +6,7 @@
 
 [profile.default]
 # The source directory
-src = 'src/contracts'
+src = 'src'
 # the test directoy
 test = '_'
 # The artifact directory
@@ -14,7 +14,7 @@ out = 'out'
 # The script directory
 script = "src/script"
 # A list of paths to look for libraries in
-libs = ["node_modules", "lib"]
+libs = ["node_modules"]
 # Whether or not to enable `vm.ffi`
 ffi = false
 # Enables or disables the optimizer

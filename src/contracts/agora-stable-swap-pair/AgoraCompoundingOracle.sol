@@ -1,5 +1,16 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.28;
+
+// ====================================================================
+//             _        ______     ___   _______          _
+//            / \     .' ___  |  .'   `.|_   __ \        / \
+//           / _ \   / .'   \_| /  .-.  \ | |__) |      / _ \
+//          / ___ \  | |   ____ | |   | | |  __ /      / ___ \
+//        _/ /   \ \_\ `.___]  |\  `-'  /_| |  \ \_  _/ /   \ \_
+//       |____| |____|`._____.'  `.___.'|____| |___||____| |____|
+// ====================================================================
+// ===================== AgoraCompoundingOracle =======================
+// ====================================================================
 
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -50,6 +61,15 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     //==============================================================================
     // View Functions
     //==============================================================================
+    function configurePriceBounds(uint256 minPrice, uint256 maxPrice) external {
+        _requireSenderIsRole({ _role: PRICE_SETTER_ROLE });
+        require(minPrice < maxPrice, "AgoraCompoundingOracle: minPrice must be less than maxPrice");
+        require(minPrice > 0, "AgoraCompoundingOracle: minPrice must be greater than 0");
+        require(maxPrice > 0, "AgoraCompoundingOracle: maxPrice must be greater than 0");
+        _getPointerToAgoraCompoundingOracleStorage().basePrice = (minPrice).toUint112();
+        _getPointerToAgoraCompoundingOracleStorage().perSecondInterestRate = ((maxPrice - minPrice) / 365 days)
+            .toUint112();
+    }
 
     event ConfigurePrice(uint256 basePrice, uint256 annualizedInterestRate);
 

@@ -1,11 +1,22 @@
-// SPDX-License-Identifier: ISC
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.28;
+
+// ====================================================================
+//             _        ______     ___   _______          _
+//            / \     .' ___  |  .'   `.|_   __ \        / \
+//           / _ \   / .'   \_| /  .-.  \ | |__) |      / _ \
+//          / ___ \  | |   ____ | |   | | |  __ /      / ___ \
+//        _/ /   \ \_\ `.___]  |\  `-'  /_| |  \ \_  _/ /   \ \_
+//       |____| |____|`._____.'  `.___.'|____| |___||____| |____|
+// ====================================================================
+// ==================== AgoraStableSwapPairCore =======================
+// ====================================================================
 
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
 
 import { IUniswapV2Callee } from "../interfaces/IUniswapV2Callee.sol";
 
-import { AgoraCompoundingOracle } from "./AgoraStableSwapCompoundingOracle.sol";
+import { AgoraCompoundingOracle } from "./AgoraCompoundingOracle.sol";
 import { AgoraStableSwapPairStorage } from "./AgoraStableSwapPairStorage.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

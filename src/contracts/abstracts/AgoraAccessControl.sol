@@ -15,8 +15,7 @@ pragma solidity >=0.8.0;
 import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /// @title AgoraAccessControl
-/// @dev Inspired by Frax Finance's Timelock2Step contract which was inspired by OpenZeppelin's Ownable2Step contract
-/// @notice An abstract contract which contains 2-step transfer and renounce logic for a privileged roles
+/// @notice An abstract contract which contains role-ba
 abstract contract AgoraAccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.Bytes32Set;
@@ -25,7 +24,7 @@ abstract contract AgoraAccessControl {
 
     /// @notice The AgoraAccessControlStorage struct
     /// @param roleData A mapping of role identifier to AgoraAccessControlRoleData to store role data
-    /// @custom:storage-location erc7201:AgoraErc1967Proxy.AgoraAccessControlStorage
+    /// @custom:storage-location erc7201:AgoraAccessControl.AgoraAccessControlStorage
     struct AgoraAccessControlStorage {
         EnumerableSet.Bytes32Set roles;
         mapping(string _role => EnumerableSet.AddressSet membership) roleMembership;
@@ -42,7 +41,7 @@ abstract contract AgoraAccessControl {
     }
 
     // ============================================================================================
-    // External Procedural Functions
+    // Procedural Functions
     // ============================================================================================
 
     /// @notice The ```assignRole``` function assigns the designated role to an address
@@ -56,11 +55,8 @@ abstract contract AgoraAccessControl {
     }
 
     function _assignRole(string memory _role, address _newAddress, bool _addRole) internal {
-        // Checks: See if role exists
-        bool _roleExists = _getPointerToAgoraAccessControlStorage().roles.contains(bytes32(bytes(_role)));
-
-        // Effects: Add role to set if it doesn't exist
-        if (!_roleExists) _addRoleToSet({ _role: _role });
+        // Effects: Add role to set, no-op if role already exists
+        _addRoleToSet({ _role: _role });
 
         // Effects: Set the roleMembership to the new address
         _setRoleMembership({ _role: _role, _address: _newAddress, _insert: _addRole });
@@ -68,38 +64,6 @@ abstract contract AgoraAccessControl {
         // Emit event
         if (_addRole) emit RoleAssigned({ role: _role, address_: _newAddress });
         else emit RoleRevoked({ role: _role, address_: _newAddress });
-    }
-
-    //==============================================================================
-    // View Functions
-    //==============================================================================
-
-    /// @notice The ```hasRole``` function checks if _address has the role
-    /// @param _role The role identifier to check
-    /// @param _address The address to check against the role
-    /// @return Whether or not _address has the role
-    function hasRole(string memory _role, address _address) external view returns (bool) {
-        return _isRole({ _role: _role, _address: _address });
-    }
-
-    /// @notice The ```getRoleMembers``` function returns the members of the role
-    /// @param _role The role identifier to check
-    /// @return _members The members of the role
-    function getRoleMembers(string memory _role) external view returns (address[] memory _members) {
-        EnumerableSet.AddressSet storage _roleMembership = _getPointerToAgoraAccessControlStorage().roleMembership[
-            _role
-        ];
-        _members = _roleMembership.values();
-    }
-
-    /// @notice The ```getAllRoles``` function returns all roles
-    /// @return _roles The roles
-    function getAllRoles() external view returns (string[] memory _roles) {
-        uint256 _length = _getPointerToAgoraAccessControlStorage().roles.length();
-        _roles = new string[](_length);
-        for (uint256 i = 0; i < _length; i++) {
-            _roles[i] = string(abi.encodePacked(_getPointerToAgoraAccessControlStorage().roles.at(i)));
-        }
     }
 
     // ============================================================================================
@@ -150,6 +114,38 @@ abstract contract AgoraAccessControl {
     /// @param _role The role identifier to check
     function _requireSenderIsRole(string memory _role) internal view {
         _requireIsRole({ _role: _role, _address: msg.sender });
+    }
+
+    //==============================================================================
+    // External View Functions
+    //==============================================================================
+
+    /// @notice The ```hasRole``` function checks if _address has the role
+    /// @param _role The role identifier to check
+    /// @param _address The address to check against the role
+    /// @return Whether or not _address has the role
+    function hasRole(string memory _role, address _address) external view returns (bool) {
+        return _isRole({ _role: _role, _address: _address });
+    }
+
+    /// @notice The ```getRoleMembers``` function returns the members of the role
+    /// @param _role The role identifier to check
+    /// @return _members The members of the role
+    function getRoleMembers(string memory _role) external view returns (address[] memory _members) {
+        EnumerableSet.AddressSet storage _roleMembership = _getPointerToAgoraAccessControlStorage().roleMembership[
+            _role
+        ];
+        _members = _roleMembership.values();
+    }
+
+    /// @notice The ```getAllRoles``` function returns all roles
+    /// @return _roles The roles
+    function getAllRoles() external view returns (string[] memory _roles) {
+        uint256 _length = _getPointerToAgoraAccessControlStorage().roles.length();
+        _roles = new string[](_length);
+        for (uint256 i = 0; i < _length; i++) {
+            _roles[i] = string(abi.encodePacked(_getPointerToAgoraAccessControlStorage().roles.at(i)));
+        }
     }
 
     //==============================================================================

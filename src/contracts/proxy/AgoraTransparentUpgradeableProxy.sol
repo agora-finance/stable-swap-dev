@@ -1,5 +1,16 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.28;
+
+// ====================================================================
+//             _        ______     ___   _______          _
+//            / \     .' ___  |  .'   `.|_   __ \        / \
+//           / _ \   / .'   \_| /  .-.  \ | |__) |      / _ \
+//          / ___ \  | |   ____ | |   | | |  __ /      / ___ \
+//        _/ /   \ \_\ `.___]  |\  `-'  /_| |  \ \_  _/ /   \ \_
+//       |____| |____|`._____.'  `.___.'|____| |___||____| |____|
+// ====================================================================
+// ================= AgoraTransparentUpgradeableProxy =================
+// ====================================================================
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
