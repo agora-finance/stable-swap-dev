@@ -93,10 +93,9 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         uint256 _maxAnnualizedInterestRate
     ) external {
         _requireSenderIsRole({ _role: ADMIN_ROLE });
-        // ! TODO: maybe we should send a different error here?
         // Check that the parameters are valid
-        if (_minPrice >= _maxPrice) revert PriceOutOfBounds();
-        if (_minAnnualizedInterestRate >= _maxAnnualizedInterestRate) revert AnnualizedInterestRateOutOfBounds();
+        if (_minPrice >= _maxPrice) revert MinPriceGreaterThanMax();
+        if (_minAnnualizedInterestRate >= _maxAnnualizedInterestRate) revert MinAnnualizedInterestRateGreaterThanMax();
 
         _getPointerToAgoraCompoundingOracleStorage().minPrice = (_minPrice).toUint112();
         _getPointerToAgoraCompoundingOracleStorage().maxPrice = (_maxPrice).toUint112();
@@ -170,4 +169,10 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
 
     /// @notice Emitted when the annualized interest rate is out of bounds
     error AnnualizedInterestRateOutOfBounds();
+
+    /// @notice Emitted when the min price is greater than the max price
+    error MinPriceGreaterThanMax();
+
+    /// @notice Emitted when the min annualized interest rate is greater than the max annualized interest rate
+    error MinAnnualizedInterestRateGreaterThanMax();
 }
