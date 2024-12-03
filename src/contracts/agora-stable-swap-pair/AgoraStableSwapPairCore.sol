@@ -69,22 +69,25 @@ contract AgoraStableSwapPairCore is
     }
 
     function initialize(InitializeParams memory _params) public initializer {
+        // Initialize the access control and oracle
+        _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
+        _initializeAgoraCompoundingOracle();
+
         // Set the token0 and token1
         _getPointerToAgoraStableSwapStorage().swapStorage.token0 = _params.token0;
         _getPointerToAgoraStableSwapStorage().swapStorage.token1 = _params.token1;
 
         // Set the token0to1Fee and token1to0Fee
         _getPointerToAgoraStableSwapStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint16();
+        emit SetTokenPurchaseFee({ token: _params.token0, tokenPurchaseFee: _params.token0PurchaseFee });
+
         _getPointerToAgoraStableSwapStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint16();
+        emit SetTokenPurchaseFee({ token: _params.token1, tokenPurchaseFee: _params.token1PurchaseFee });
 
-        // Set the fee setter
-        _setRoleMembership({ _role: FEE_SETTER_ROLE, _address: _params.initialFeeSetter, _insert: true });
-        emit RoleAssigned({ role: FEE_SETTER_ROLE, address_: _params.initialFeeSetter });
-
-        _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
-        _initializeAgoraCompoundingOracle();
+        // Set the tokenReceiverAddress
+        _getPointerToAgoraStableSwapStorage().config.tokenReceiverAddress = _params.initialTokenReceiver;
+        emit SetTokenReceiver({ tokenReceiver: _params.initialTokenReceiver });
     }
-
     //==============================================================================
     // Modifiers
     //==============================================================================
