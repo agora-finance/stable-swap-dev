@@ -67,7 +67,6 @@ contract AgoraStableSwapPairCore is
     }
 
     function initialize(InitializeParams memory _params) public initializer {
-        // ! TODO emit event for this
         // Initialize the access control and oracle
         _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
         _initializeAgoraCompoundingOracle();
@@ -78,12 +77,15 @@ contract AgoraStableSwapPairCore is
 
         // Set the token0to1Fee and token1to0Fee
         _getPointerToAgoraStableSwapStorage().token0PurchaseFee = _params.token0PurchaseFee;
+        emit SetTokenPurchaseFee({ token: _params.token0, tokenPurchaseFee: _params.token0PurchaseFee });
+
         _getPointerToAgoraStableSwapStorage().token1PurchaseFee = _params.token1PurchaseFee;
+        emit SetTokenPurchaseFee({ token: _params.token1, tokenPurchaseFee: _params.token1PurchaseFee });
 
         // Set the tokenReceiverAddress
         _getPointerToAgoraStableSwapStorage().tokenReceiverAddress = _params.initialTokenReceiver;
+        emit SetTokenReceiver({ tokenReceiver: _params.initialTokenReceiver });
     }
-
     //==============================================================================
     // Modifiers
     //==============================================================================

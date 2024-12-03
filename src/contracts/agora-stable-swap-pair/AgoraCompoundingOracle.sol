@@ -26,9 +26,9 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
 
     struct AgoraCompoundingOracleStorage {
         uint112 perSecondInterestRate; // The per second interest rate
-        uint112 basePrice; // The base _token0OverToken1Price of the asset
-        uint112 minPrice; // The minimum allowed _token0OverToken1Price
-        uint112 maxPrice; // The maximum allowed _token0OverToken1Price
+        uint112 basePrice; // The base price of the pair expressed as _token0OverToken1Price
+        uint112 minBasePrice; // The minimum allowed base price
+        uint112 maxBasePrice; // The maximum allowed base price
         uint112 minAnnualizedInterestRate; // The minimum allowed annualized interest rate
         uint112 maxAnnualizedInterestRate; // The maximum allowed annualized interest rate
         uint32 lastUpdated; // The timestamp of the last price update
@@ -52,14 +52,6 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         }
     }
 
-    function _getCopyOfAgoraCompoundingOracleStorage()
-        internal
-        pure
-        returns (AgoraCompoundingOracleStorage memory agoraCompoundingOracleStorage)
-    {
-        agoraCompoundingOracleStorage = _getPointerToAgoraCompoundingOracleStorage();
-    }
-
     //==============================================================================
     // Initialization Functions
     //==============================================================================
@@ -75,47 +67,47 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     //==============================================================================
 
     event SetOraclePriceBounds(
-        uint256 minPrice,
-        uint256 maxPrice,
+        uint256 minBasePrice,
+        uint256 maxBasePrice,
         uint256 minAnnualizedInterestRate,
         uint256 maxAnnualizedInterestRate
     );
 
-    function configurePriceBounds(
-        uint256 _minPrice,
-        uint256 _maxPrice,
+    function setOraclePriceBounds(
+        uint256 _minBasePrice,
+        uint256 _maxBasePrice,
         uint256 _minAnnualizedInterestRate,
         uint256 _maxAnnualizedInterestRate
     ) external {
         _requireSenderIsRole({ _role: ADMIN_ROLE });
         // Check that the parameters are valid
-        if (_minPrice >= _maxPrice) revert MinPriceGreaterThanMax();
+        if (_minBasePrice >= _maxBasePrice) revert MinBasePriceGreaterThanMaxBasePrice();
         if (_minAnnualizedInterestRate >= _maxAnnualizedInterestRate) revert MinAnnualizedInterestRateGreaterThanMax();
 
-        _getPointerToAgoraCompoundingOracleStorage().minPrice = (_minPrice).toUint112();
-        _getPointerToAgoraCompoundingOracleStorage().maxPrice = (_maxPrice).toUint112();
+        _getPointerToAgoraCompoundingOracleStorage().minBasePrice = (_minBasePrice).toUint112();
+        _getPointerToAgoraCompoundingOracleStorage().maxBasePrice = (_maxBasePrice).toUint112();
         _getPointerToAgoraCompoundingOracleStorage().minAnnualizedInterestRate = (_minAnnualizedInterestRate)
             .toUint112();
         _getPointerToAgoraCompoundingOracleStorage().maxAnnualizedInterestRate = (_maxAnnualizedInterestRate)
             .toUint112();
 
         emit SetOraclePriceBounds({
-            minPrice: _minPrice,
-            maxPrice: _maxPrice,
+            minBasePrice: _minBasePrice,
+            maxBasePrice: _maxBasePrice,
             minAnnualizedInterestRate: _minAnnualizedInterestRate,
             maxAnnualizedInterestRate: _maxAnnualizedInterestRate
         });
     }
 
-    event ConfigurePrice(uint256 basePrice, uint256 annualizedInterestRate);
+    event ConfigureOraclePrice(uint256 basePrice, uint256 annualizedInterestRate);
 
-    function configurePrice(uint256 _basePrice, uint256 _annualizedInterestRate) external {
+    function configureOraclePrice(uint256 _basePrice, uint256 _annualizedInterestRate) external {
         _requireSenderIsRole({ _role: PRICE_SETTER_ROLE });
 
-        AgoraCompoundingOracleStorage memory _storage = _getCopyOfAgoraCompoundingOracleStorage();
+        AgoraCompoundingOracleStorage memory _storage = _getPointerToAgoraCompoundingOracleStorage();
 
         // Check that the price is within bounds
-        if (_basePrice < _storage.minPrice || _basePrice > _storage.maxPrice) revert PriceOutOfBounds();
+        if (_basePrice < _storage.minBasePrice || _basePrice > _storage.maxBasePrice) revert BasePriceOutOfBounds();
         if (
             _annualizedInterestRate < _storage.minAnnualizedInterestRate ||
             _annualizedInterestRate > _storage.maxAnnualizedInterestRate
@@ -130,7 +122,7 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         _getPointerToAgoraCompoundingOracleStorage().basePrice = (_basePrice).toUint112();
 
         // emit event
-        emit ConfigurePrice(_basePrice, _annualizedInterestRate);
+        emit ConfigureOraclePrice(_basePrice, _annualizedInterestRate);
     }
 
     function getCompoundingPrice(
@@ -160,13 +152,13 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     }
 
     /// @notice Emitted when the price is out of bounds
-    error PriceOutOfBounds();
+    error BasePriceOutOfBounds();
 
     /// @notice Emitted when the annualized interest rate is out of bounds
     error AnnualizedInterestRateOutOfBounds();
 
-    /// @notice Emitted when the min price is greater than the max price
-    error MinPriceGreaterThanMax();
+    /// @notice Emitted when the min base price is greater than the max base price
+    error MinBasePriceGreaterThanMaxBasePrice();
 
     /// @notice Emitted when the min annualized interest rate is greater than the max annualized interest rate
     error MinAnnualizedInterestRateGreaterThanMax();
