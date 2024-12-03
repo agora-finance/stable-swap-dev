@@ -20,43 +20,35 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
     using SafeERC20 for IERC20;
 
     function token0() public view returns (address) {
-        return _getPointerToAgoraStableSwapStorage().token0;
+        return _getPointerToAgoraStableSwapStorage().swapStorage.token0;
     }
 
     function token1() public view returns (address) {
-        return _getPointerToAgoraStableSwapStorage().token1;
+        return _getPointerToAgoraStableSwapStorage().swapStorage.token1;
     }
 
     function token0PurchaseFee() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().token0PurchaseFee;
+        return _getPointerToAgoraStableSwapStorage().swapStorage.token0PurchaseFee;
     }
 
     function token1PurchaseFee() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().token1PurchaseFee;
-    }
-
-    function oracleAddress() public view returns (address) {
-        return _getPointerToAgoraStableSwapStorage().oracleAddress;
+        return _getPointerToAgoraStableSwapStorage().swapStorage.token1PurchaseFee;
     }
 
     function isPaused() public view returns (bool) {
-        return _getPointerToAgoraStableSwapStorage().isPaused;
+        return _getPointerToAgoraStableSwapStorage().swapStorage.isPaused;
     }
 
     function token0OverToken1Price() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().token0OverToken1Price;
+        return _getPointerToAgoraStableSwapStorage().swapStorage.token0OverToken1Price;
     }
 
     function reserve0() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().reserve0;
+        return _getPointerToAgoraStableSwapStorage().swapStorage.reserve0;
     }
 
     function reserve1() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().reserve1;
-    }
-
-    function lastBlock() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().lastBlock;
+        return _getPointerToAgoraStableSwapStorage().swapStorage.reserve1;
     }
 
     function getAmountsOut(
@@ -64,21 +56,22 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         uint256 _amountIn,
         address[] memory _path
     ) public view returns (uint256[] memory _amounts) {
-        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
         _requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
-        return
-            _getAmountsOut({
-                _amountIn: _amountIn,
-                _path: _path,
-                _token0: _storage.token0,
-                _token0PurchaseFee: _storage.token0PurchaseFee,
-                _token1PurchaseFee: _storage.token1PurchaseFee,
-                _token0OverToken1Price: _token0OverToken1Price
-            });
+        // instantiate return variables
+        _amounts = new uint256[](2);
+        _amounts[0] = _amountIn;
+
+        // path[1] represents our tokenOut
+        if (_path[1] == _storage.token0) {
+            _amounts[1] = _getAmount0Out(_amountIn, _token0OverToken1Price, _storage.token0PurchaseFee);
+        } else {
+            _amounts[1] = _getAmount1Out(_amountIn, _token0OverToken1Price, _storage.token1PurchaseFee);
+        }
     }
 
     function getAmountsIn(
@@ -86,20 +79,22 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         uint256 _amountOut,
         address[] memory _path
     ) public view returns (uint256[] memory _amounts) {
-        AgoraStableSwapStorage memory _storage = _getPointerToAgoraStableSwapStorage();
+        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
         _requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
-        return
-            _getAmountsIn({
-                _amountOut: _amountOut,
-                _path: _path,
-                _token0: _storage.token0,
-                _token0PurchaseFee: _storage.token0PurchaseFee,
-                _token1PurchaseFee: _storage.token1PurchaseFee,
-                _token0OverToken1Price: _token0OverToken1Price
-            });
+        // instantiate return variables
+        _amounts = new uint256[](2);
+        // set the amountOut
+        _amounts[1] = _amountOut;
+
+        // path[0] represents our tokenIn
+        if (_path[0] == _storage.token0) {
+            _amounts[0] = _getAmount0In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee);
+        } else {
+            _amounts[0] = _getAmount1In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee);
+        }
     }
 }

@@ -16,24 +16,30 @@ contract AgoraStableSwapPairStorage {
     //==============================================================================
     // Structs
     //==============================================================================
+    struct ConfigStorage {
+        uint256 minToken0PurchaseFee; // 18 decimals
+        uint256 maxToken0PurchaseFee; // 18 decimals
+        uint256 minToken1PurchaseFee; // 18 decimals
+        uint256 maxToken1PurchaseFee; // 18 decimals
+        address tokenReceiverAddress;
+    }
+
+    struct SwapStorage {
+        bool isPaused;
+        address token0;
+        address token1;
+        uint112 reserve0;
+        uint112 reserve1;
+        uint16 token0PurchaseFee; // given as bps with 1 decimal (i.e. 1000 = 100 bps = 1%)
+        uint16 token1PurchaseFee; // given as bps with 1 decimal (i.e. 1000 = 100 bps = 1%)
+        uint40 priceLastUpdated;
+        uint128 token0OverToken1Price; // given as token1's price in token0 with 18 decimals
+    }
 
     /// @notice The AgoraStableSwapStorage struct is used to store the state of the AgoraStableSwapPair contract
     struct AgoraStableSwapStorage {
-        address token0;
-        address token1;
-        uint256 token0PurchaseFee; // 18 decimals
-        uint256 minToken0PurchaseFee; // 18 decimals
-        uint256 maxToken0PurchaseFee; // 18 decimals
-        uint256 token1PurchaseFee; // 18 decimals
-        uint256 minToken1PurchaseFee; // 18 decimals
-        uint256 maxToken1PurchaseFee; // 18 decimals
-        address oracleAddress;
-        uint256 token0OverToken1Price; // given as token1's price in token0
-        uint256 reserve0;
-        uint256 reserve1;
-        uint256 lastBlock;
-        bool isPaused;
-        address tokenReceiverAddress;
+        SwapStorage swapStorage;
+        ConfigStorage config;
     }
 
     //==============================================================================
