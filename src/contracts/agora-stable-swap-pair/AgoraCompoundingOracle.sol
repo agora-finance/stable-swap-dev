@@ -78,6 +78,14 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     //==============================================================================
     // View Functions
     //==============================================================================
+
+    event SetOraclePriceBounds(
+        uint256 minPrice,
+        uint256 maxPrice,
+        uint256 minAnnualizedInterestRate,
+        uint256 maxAnnualizedInterestRate
+    );
+
     function configurePriceBounds(
         uint256 _minPrice,
         uint256 _maxPrice,
@@ -96,6 +104,13 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
             .toUint112();
         _getPointerToAgoraCompoundingOracleStorage().maxAnnualizedInterestRate = (_maxAnnualizedInterestRate)
             .toUint112();
+
+        emit SetOraclePriceBounds({
+            minPrice: _minPrice,
+            maxPrice: _maxPrice,
+            minAnnualizedInterestRate: _minAnnualizedInterestRate,
+            maxAnnualizedInterestRate: _maxAnnualizedInterestRate
+        });
     }
 
     event ConfigurePrice(uint256 basePrice, uint256 annualizedInterestRate);
