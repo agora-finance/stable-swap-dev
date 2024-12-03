@@ -8,7 +8,8 @@ Before you begin, ensure you have met the following requirements:
 
 - **Node.js**: You need to have [Node.js](https://nodejs.org/) installed.
 - **npm**: Node.js package manager, which is installed with Node.js.
-- **Solidity Compiler**: Required for compiling smart contracts. You can use [Forge](https://book.getfoundry.sh/forge/) from the Foundry toolkit.
+- **Git**: Required for cloning the repository [Git](https://git-scm.com/downloads).
+- **Solidity Compiler**: Required for compiling smart contracts. You can use [Forge](https://book.getfoundry.sh/getting-started/installation) from the Foundry toolkit.
 
 ## Installation
 

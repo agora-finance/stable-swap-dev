@@ -68,11 +68,6 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         _getPointerToAgoraCompoundingOracleStorage().perSecondInterestRate = uint112(0);
         _getPointerToAgoraCompoundingOracleStorage().lastUpdated = (block.timestamp).toUint32();
         _getPointerToAgoraCompoundingOracleStorage().basePrice = uint112(1e18);
-        // ! TODO: do we want smaller ranges on initialization here?
-        _getPointerToAgoraCompoundingOracleStorage().minPrice = uint112(0);
-        _getPointerToAgoraCompoundingOracleStorage().maxPrice = uint112(type(uint256).max);
-        _getPointerToAgoraCompoundingOracleStorage().minAnnualizedInterestRate = uint112(0);
-        _getPointerToAgoraCompoundingOracleStorage().maxAnnualizedInterestRate = uint112(type(uint256).max);
     }
 
     //==============================================================================
