@@ -22,7 +22,11 @@ contract AgoraStableSwapPairStorage {
         address token0;
         address token1;
         uint256 token0PurchaseFee; // 18 decimals
+        uint256 minToken0PurchaseFee; // 18 decimals
+        uint256 maxToken0PurchaseFee; // 18 decimals
         uint256 token1PurchaseFee; // 18 decimals
+        uint256 minToken1PurchaseFee; // 18 decimals
+        uint256 maxToken1PurchaseFee; // 18 decimals
         address oracleAddress;
         uint256 token0OverToken1Price; // given as token1's price in token0
         uint256 reserve0;

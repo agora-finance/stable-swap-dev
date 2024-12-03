@@ -12,7 +12,7 @@ pragma solidity ^0.8.28;
 // ================== AgoraStableSwapAccessControl ====================
 // ====================================================================
 
-import { AgoraAccessControl } from "../abstracts/AgoraAccessControl.sol";
+import { AgoraAccessControl } from "agora-contracts/access-control/AgoraAccessControl.sol";
 
 contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @notice the WHITELISTER_ROLE identifier

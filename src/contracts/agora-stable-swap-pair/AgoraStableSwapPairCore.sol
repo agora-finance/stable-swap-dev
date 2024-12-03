@@ -40,6 +40,24 @@ contract AgoraStableSwapPairCore is
 {
     using SafeERC20 for IERC20;
 
+    // struct AgoraStableSwapStorage {
+    //     address token0;
+    //     address token1;
+    //     uint256 token0PurchaseFee; // 18 decimals
+    //     uint256 minToken0PurchaseFee; // 18 decimals
+    //     uint256 maxToken0PurchaseFee; // 18 decimals
+    //     uint256 token1PurchaseFee; // 18 decimals
+    //     uint256 minToken1PurchaseFee; // 18 decimals
+    //     uint256 maxToken1PurchaseFee; // 18 decimals
+    //     address oracleAddress;
+    //     uint256 token0OverToken1Price; // given as token1's price in token0
+    //     uint256 reserve0;
+    //     uint256 reserve1;
+    //     uint256 lastBlock;
+    //     bool isPaused;
+    //     address tokenReceiverAddress;
+    // }
+
     //==============================================================================
     // Constructor & Initalization Functions
     //==============================================================================
@@ -363,6 +381,36 @@ contract AgoraStableSwapPairCore is
         emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _isApproved });
     }
 
+    event SetFeeBounds(
+        uint256 minToken0PurchaseFee,
+        uint256 maxToken0PurchaseFee,
+        uint256 minToken1PurchaseFee,
+        uint256 maxToken1PurchaseFee
+    );
+
+    function setFeeBounds(
+        uint256 minToken0PurchaseFee,
+        uint256 maxToken0PurchaseFee,
+        uint256 minToken1PurchaseFee,
+        uint256 maxToken1PurchaseFee
+    ) external {
+        // Checks: Only the admin can set the fee bounds
+        _requireSenderIsRole({ _role: ADMIN_ROLE });
+
+        // Effects: Set the fee bounds
+        _getPointerToAgoraStableSwapStorage().minToken0PurchaseFee = minToken0PurchaseFee;
+        _getPointerToAgoraStableSwapStorage().maxToken0PurchaseFee = maxToken0PurchaseFee;
+        _getPointerToAgoraStableSwapStorage().minToken1PurchaseFee = minToken1PurchaseFee;
+        _getPointerToAgoraStableSwapStorage().maxToken1PurchaseFee = maxToken1PurchaseFee;
+
+        emit SetFeeBounds({
+            minToken0PurchaseFee: minToken0PurchaseFee,
+            maxToken0PurchaseFee: maxToken0PurchaseFee,
+            minToken1PurchaseFee: minToken1PurchaseFee,
+            maxToken1PurchaseFee: maxToken1PurchaseFee
+        });
+    }
+
     event SetTokenPurchaseFee(address indexed token, uint256 tokenPurchaseFee);
 
     function setTokenPurchaseFee(address _token, uint256 _tokenPurchaseFee) public {
@@ -371,8 +419,16 @@ contract AgoraStableSwapPairCore is
 
         // Effects: Set the token1to0Fee
         if (_token == _getPointerToAgoraStableSwapStorage().token0) {
+            if (
+                _tokenPurchaseFee < _getPointerToAgoraStableSwapStorage().minToken0PurchaseFee ||
+                _tokenPurchaseFee > _getPointerToAgoraStableSwapStorage().maxToken0PurchaseFee
+            ) revert InvalidTokenPurchaseFee({ token: _token });
             _getPointerToAgoraStableSwapStorage().token0PurchaseFee = _tokenPurchaseFee;
         } else if (_token == _getPointerToAgoraStableSwapStorage().token1) {
+            if (
+                _tokenPurchaseFee < _getPointerToAgoraStableSwapStorage().minToken1PurchaseFee ||
+                _tokenPurchaseFee > _getPointerToAgoraStableSwapStorage().maxToken1PurchaseFee
+            ) revert InvalidTokenPurchaseFee({ token: _token });
             _getPointerToAgoraStableSwapStorage().token1PurchaseFee = _tokenPurchaseFee;
         } else {
             revert InvalidTokenAddress({ token: _token });
@@ -467,4 +523,7 @@ contract AgoraStableSwapPairCore is
 
     /// @notice Emitted when the reserve is insufficient
     error InsufficientLiquidity();
+
+    /// @notice Emitted when the token purchase fee is invalid
+    error InvalidTokenPurchaseFee(address token);
 }
