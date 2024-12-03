@@ -25,13 +25,13 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     //==============================================================================
 
     struct AgoraCompoundingOracleStorage {
-        uint112 perSecondInterestRate;
-        uint112 basePrice;
-        uint112 minPrice;
-        uint112 maxPrice;
-        uint112 minAnnualizedInterestRate;
-        uint112 maxAnnualizedInterestRate;
-        uint32 lastUpdated;
+        uint112 perSecondInterestRate; // The per second interest rate
+        uint112 basePrice; // The base _token0OverToken1Price of the asset
+        uint112 minPrice; // The minimum allowed _token0OverToken1Price
+        uint112 maxPrice; // The maximum allowed _token0OverToken1Price
+        uint112 minAnnualizedInterestRate; // The minimum allowed annualized interest rate
+        uint112 maxAnnualizedInterestRate; // The maximum allowed annualized interest rate
+        uint32 lastUpdated; // The timestamp of the last price update
     }
 
     /// @notice The ```ORACLE_STORAGE_SLOT``` is the storage slot for the CompoundingOracleStorage struct
