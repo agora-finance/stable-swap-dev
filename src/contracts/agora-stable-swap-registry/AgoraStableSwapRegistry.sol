@@ -35,6 +35,7 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @notice a set of the current registered swap addresses
+    /// @param registeredSwapAddresses A set of the current registered swap addresses
     struct AgoraStableSwapRegistryStorage {
         EnumerableSet.AddressSet registeredSwapAddresses;
     }
@@ -47,6 +48,8 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
         _disableInitializers();
     }
 
+    /// @notice The ```initialize``` function initializes the AgoraStableSwapRegistry contract
+    /// @param _initialAdminAddress The address of the initial admin
     function initialize(address _initialAdminAddress) external initializer {
         _initializeAgoraStableSwapRegistryAccessControl({ _initialAdminAddress: _initialAdminAddress });
     }
@@ -55,8 +58,10 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
     // External Stateful Functions
     //==============================================================================
 
+    // ! TODO: should this function emit an event?
     /// @notice the ```registerSwapAddress``` function registers a swap address
     /// @param _swapAddress the address of the swap to register
+    /// @param _isRegistered the boolean value indicating whether the swap is registered
     function setSwapAddress(address _swapAddress, bool _isRegistered) external {
         _requireSenderIsRole({ _role: BOOKKEEPER_ROLE });
         if (_isRegistered) {
@@ -66,6 +71,8 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
         }
     }
 
+    /// @notice the ```executeOnRegisteredAddresses``` function executes a function call on all registered swap addresses
+    /// @param _data the data to execute on the registered swap addresses
     function executeOnRegisteredAddresses(bytes calldata _data) external {
         _requireSenderIsRole({ _role: ADMIN_ROLE });
         address[] memory _registeredSwapAddresses = _getPointerToAgoraStableSwapRegistryStorage()
@@ -78,6 +85,10 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
         }
     }
 
+    /// @notice the ```tryExecuteOnRegisteredAddresses``` function tries to execute a function call on all registered swap addresses
+    /// @param _data the data to execute on the registered swap addresses
+    /// @return _successfulAddresses an array of the successful addresses
+    /// @return _failedAddresses an array of the failed addresses
     function tryExecuteOnRegisteredAddresses(
         bytes calldata _data
     ) external returns (address[] memory _successfulAddresses, address[] memory _failedAddresses) {
@@ -98,6 +109,11 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
         }
     }
 
+    /// @notice the ```tryWhitelistUserOnRegisteredAddresses``` function tries to whitelist a user on all registered swap addresses
+    /// @param _address the address to whitelist
+    /// @param _isApproved the boolean value indicating whether the address is approved
+    /// @return _successfulAddresses an array of the successful addresses
+    /// @return _failedAddresses an array of the failed addresses
     function tryWhitelistUserOnRegisteredAddresses(
         address _address,
         bool _isApproved
@@ -120,6 +136,10 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
         }
     }
 
+    /// @notice the ```tryPauseRegisteredAddresses``` function tries to pause all registered swap addresses
+    /// @param _setPaused the boolean value indicating whether to pause the registered swap addresses
+    /// @return _successfulAddresses an array of the successful addresses
+    /// @return _failedAddresses an array of the failed addresses
     function tryPauseRegisteredAddresses(
         bool _setPaused
     ) external returns (address[] memory _successfulAddresses, address[] memory _failedAddresses) {
@@ -144,14 +164,21 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
     // View Functions
     //==============================================================================
 
+    /// @notice the ```registeredSwapAddresses``` function returns the registered swap addresses
+    /// @return _values an array of the registered swap addresses
     function registeredSwapAddresses() external view returns (address[] memory _values) {
         _values = _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.values();
     }
 
+    /// @notice the ```isRegisteredSwapAddress``` function checks if an address is registered
+    /// @param _account the address to check
+    /// @return _isRegistered the boolean value indicating whether the address is registered
     function isRegisteredSwapAddress(address _account) public view returns (bool _isRegistered) {
         _isRegistered = _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.contains(_account);
     }
 
+    /// @notice the ```registeredSwapAddressesLength``` function returns the length of the registered swap addresses
+    /// @return _length the length of the registered swap addresses
     function registeredSwapAddressesLength() external view returns (uint256 _length) {
         _length = _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.length();
     }
@@ -200,5 +227,7 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
     // Errors
     //==============================================================================
 
+    /// @notice the ```CallToRegisteredSwapAddressFailed``` error is emitted when the call to a registered swap address fails
+    /// @param swapAddress the address of the swap that failed
     error CallToRegisteredSwapAddressFailed(address swapAddress);
 }

@@ -12,6 +12,9 @@ pragma solidity ^0.8.28;
 // =================== AgoraStableSwapPairStorage =====================
 // ====================================================================
 
+/// @notice The AgoraStableSwapPairStorage contract is used to store the state of the AgoraStableSwapPair contract
+/// @dev This contract is used to store the state of the AgoraStableSwapPair contract
+/// @author Agora
 contract AgoraStableSwapPairStorage {
     //==============================================================================
     // Structs
@@ -37,6 +40,20 @@ contract AgoraStableSwapPairStorage {
     }
 
     /// @notice The AgoraStableSwapStorage struct is used to store the state of the AgoraStableSwapPair contract
+    /// @param token0 The address of token0
+    /// @param token1 The address of token1
+    /// @param token0PurchaseFee The purchase fee for token0
+    /// @param minToken0PurchaseFee The minimum purchase fee for token0
+    /// @param maxToken0PurchaseFee The maximum purchase fee for token0
+    /// @param token1PurchaseFee The purchase fee for token1
+    /// @param minToken1PurchaseFee The minimum purchase fee for token1
+    /// @param maxToken1PurchaseFee The maximum purchase fee for token1
+    /// @param oracleAddress The address of the oracle
+    /// @param reserve0 The reserve of token0
+    /// @param reserve1 The reserve of token1
+    /// @param lastBlock The last block number
+    /// @param isPaused The boolean value indicating whether the pair is paused
+    /// @param tokenReceiverAddress The address of the token receiver
     struct AgoraStableSwapStorage {
         SwapStorage swapStorage;
         ConfigStorage config;
@@ -60,6 +77,9 @@ contract AgoraStableSwapPairStorage {
         }
     }
 
+    //! TODO: Remove this function
+    /// @notice The ```_getCopyOfAgoraStableSwapStorage``` function returns a copy of the AgoraStableSwapStorage struct
+    /// @return agoraStableSwapStorage A copy of the AgoraStableSwapStorage struct
     function _getCopyOfAgoraStableSwapStorage()
         internal
         pure
