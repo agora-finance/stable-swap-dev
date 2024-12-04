@@ -18,6 +18,19 @@ import { EnumerableSet } from "@openzeppelin/contracts/utils/structs/EnumerableS
 
 import { IAgoraStableSwapPair } from "../interfaces/IAgoraStableSwapPair.sol";
 
+/// @notice The ```Version``` struct is used to represent the version of the AgoraStableSwapRegistry
+/// @param major The major version number
+/// @param minor The minor version number
+/// @param patch The patch version number
+struct Version {
+    uint256 major;
+    uint256 minor;
+    uint256 patch;
+}
+
+/// @title AgoraStableSwapRegistry
+/// @notice The AgoraStableSwapRegistry contract is used to register and manage the addresses of the AgoraStableSwapPair contracts
+/// @author Agora
 contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccessControl {
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -46,8 +59,11 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
     /// @param _swapAddress the address of the swap to register
     function setSwapAddress(address _swapAddress, bool _isRegistered) external {
         _requireSenderIsRole({ _role: BOOKKEEPER_ROLE });
-        if (_isRegistered) _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.add(_swapAddress);
-        else _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.remove(_swapAddress);
+        if (_isRegistered) {
+            _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.add({ value: _swapAddress });
+        } else {
+            _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.remove({ value: _swapAddress });
+        }
     }
 
     function executeOnRegisteredAddresses(bytes calldata _data) external {
@@ -138,6 +154,12 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
 
     function registeredSwapAddressesLength() external view returns (uint256 _length) {
         _length = _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.length();
+    }
+
+    /// @notice The ```version``` function returns the version of the AgoraStableSwapRegistry
+    /// @return _version The version of the AgoraStableSwapRegistry
+    function version() external view returns (Version memory _version) {
+        _version = Version({ major: 1, minor: 0, patch: 0 });
     }
 
     //==============================================================================

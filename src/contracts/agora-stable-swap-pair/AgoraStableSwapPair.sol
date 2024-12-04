@@ -16,6 +16,19 @@ import { AgoraStableSwapPairCore } from "./AgoraStableSwapPairCore.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/// @notice The ```Version``` struct is used to represent the version of the AgoraStableSwapPair
+/// @param major The major version number
+/// @param minor The minor version number
+/// @param patch The patch version number
+struct Version {
+    uint256 major;
+    uint256 minor;
+    uint256 patch;
+}
+
+/// @title AgoraStableSwapPair
+/// @notice The AgoraStableSwapPair is a contract that manages the core logic for the AgoraStableSwapPair
+/// @author Agora
 contract AgoraStableSwapPair is AgoraStableSwapPairCore {
     using SafeERC20 for IERC20;
 
@@ -96,5 +109,11 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         } else {
             _amounts[0] = _getAmount1In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee);
         }
+    }
+
+    /// @notice The ```version``` function returns the version of the AgoraStableSwapPair
+    /// @return _version The version of the AgoraStableSwapPair
+    function version() external view returns (Version memory _version) {
+        _version = Version({ major: 1, minor: 0, patch: 0 });
     }
 }
