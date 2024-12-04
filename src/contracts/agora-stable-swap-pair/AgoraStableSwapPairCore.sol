@@ -133,15 +133,10 @@ contract AgoraStableSwapPairCore is
         // Checks: path length is 2
         if (_path.length != 2) revert InvalidPath();
 
-        // Checks: path must contain token0 and token1
-        if (_path[0] == _token0) {
-            if (_path[1] != _token1) {
-                revert InvalidPath();
-            } else if (_path[0] == _token1) {
-                if (_path[1] != _token0) revert InvalidPath();
-                else revert InvalidPath();
-            }
-        }
+        // ! TODO: do we want to allow token1 to be on path[0]
+        if (_path[0] == _token0 && _path[1] == _token1) return;
+        else if (_path[0] == _token1 && _path[1] == _token0) return;
+        revert InvalidPath();
     }
 
     /// @notice The ```getAmount0In``` function calculates the amount of input token0In required for a given amount token1Out
@@ -259,7 +254,7 @@ contract AgoraStableSwapPairCore is
         // Checks:: Final invariant, ensure that we received the correct amount of tokens
         if (_amount0Out > 0) {
             // we are sending token0 out, receiving token1 In
-            uint256 _expectedAmount1In = _getAmount1In(_amount1Out, _token0OverToken1Price, _storage.token0PurchaseFee);
+            uint256 _expectedAmount1In = _getAmount1In(_amount0Out, _token0OverToken1Price, _storage.token0PurchaseFee);
             if (_expectedAmount1In < _token1In) revert InsufficientInputAmount();
         } else {
             // we are sending token1 out, receiving token0 in
@@ -270,6 +265,7 @@ contract AgoraStableSwapPairCore is
         // Update reserves
         _sync(_finalToken0Balance, _finalToken1Balance);
 
+        // ! TODO: is this event declared anywhere? overload?
         // emit event
         emit Swap({
             sender: msg.sender,
@@ -560,7 +556,7 @@ contract AgoraStableSwapPairCore is
         _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
 
         // Effects: Set the isPaused state
-        _getPointerToAgoraStableSwapStorage().swapStorage.isPaused = _isPaused;
+        _getPointerToAgoraStableSwapStorage().swapStorage.isPaused = _setPaused;
 
         // emit event
         emit SetPaused({ isPaused: _setPaused });

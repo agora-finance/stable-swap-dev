@@ -48,6 +48,7 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
     // External Stateful Functions
     //==============================================================================
 
+    // ! TODO: should this function emit an event?
     /// @notice the ```registerSwapAddress``` function registers a swap address
     /// @param _swapAddress the address of the swap to register
     /// @param _isRegistered the boolean value indicating whether the swap is registered
