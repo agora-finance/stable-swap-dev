@@ -14,6 +14,9 @@ pragma solidity ^0.8.28;
 
 import { AgoraAccessControl } from "agora-contracts/access-control/AgoraAccessControl.sol";
 
+/// @title AgoraStableSwapAccessControl
+/// @notice The AgoraStableSwapAccessControl is a contract that manages the access control for the AgoraStableSwapPair
+/// @author Agora
 contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @notice the WHITELISTER_ROLE identifier
     string public constant WHITELISTER_ROLE = "WHITELISTER_ROLE";
@@ -27,12 +30,16 @@ contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @notice the PAUSER_ROLE identifier
     string public constant PAUSER_ROLE = "PAUSER_ROLE";
 
+    //! TODO: APPROVED_SWAPPER_ROLE?
     /// @notice the APPROVED_SWAPPER identifier
     string public constant APPROVED_SWAPPER = "APPROVED_SWAPPER";
 
     /// @notice the PRICE_SETTER_ROLE identifier
     string public constant PRICE_SETTER_ROLE = "PRICE_SETTER_ROLE";
 
+    /// @notice The ```_initializeAgoraStableSwapAccessControl``` function initializes the AgoraStableSwapAccessControl contract
+    /// @dev This function adds the default roles that are required by the AgoraStableSwapPair
+    /// @param _initialAdminAddress The address of the initial admin
     function _initializeAgoraStableSwapAccessControl(address _initialAdminAddress) internal {
         _initializeAgoraAccessControl(_initialAdminAddress);
         // Set the default roles

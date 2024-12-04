@@ -15,6 +15,12 @@ pragma solidity ^0.8.28;
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+//! TODO: this contract actually uses a linear increase in price over time, not compounding
+
+/// @title AgoraCompoundingOracle
+/// @notice The AgoraCompoundingOracle is a contract that manages the price of a pair
+/// @dev The price accrues with a simple compounding model, updated using per second interest rate
+/// @author Agora
 contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     using SafeCast for uint256;
 
@@ -24,17 +30,25 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     // erc7201 Unstructured Storage
     //==============================================================================
 
+    /// @notice The ```AgoraCompoundingOracleStorage``` struct
+    /// @param perSecondInterestRate The per second interest rate
+    /// @param basePrice The base price of the pair expressed as _token0OverToken1Price
+    /// @param minBasePrice The minimum allowed initial base price
+    /// @param maxBasePrice The maximum allowed initial base price
+    /// @param minAnnualizedInterestRate The minimum allowed annualized interest rate
+    /// @param maxAnnualizedInterestRate The maximum allowed annualized interest rate
+    /// @param lastUpdated The timestamp of the last price update
     struct AgoraCompoundingOracleStorage {
-        uint112 perSecondInterestRate; // The per second interest rate
-        uint112 basePrice; // The base price of the pair expressed as _token0OverToken1Price
-        uint112 minBasePrice; // The minimum allowed base price
-        uint112 maxBasePrice; // The maximum allowed base price
-        uint112 minAnnualizedInterestRate; // The minimum allowed annualized interest rate
-        uint112 maxAnnualizedInterestRate; // The maximum allowed annualized interest rate
-        uint32 lastUpdated; // The timestamp of the last price update
+        uint112 perSecondInterestRate;
+        uint112 basePrice;
+        uint112 minBasePrice;
+        uint112 maxBasePrice;
+        uint112 minAnnualizedInterestRate;
+        uint112 maxAnnualizedInterestRate;
+        uint32 lastUpdated;
     }
 
-    /// @notice The ```ORACLE_STORAGE_SLOT``` is the storage slot for the CompoundingOracleStorage struct
+    /// @notice The ```AGORA_COMPOUNDING_ORACLE_STORAGE_SLOT``` is the storage slot for the CompoundingOracleStorage struct
     /// @dev keccak256(abi.encode(uint256(keccak256("AgoraStableSwapStorage.AgoraCompoundingOracleStorage") - 1)) & ~bytes32(uint256(0xff))
     bytes32 public constant AGORA_COMPOUNDING_ORACLE_STORAGE_SLOT =
         0xe8ff8c05fe4db6c989cd24f41a6017bb61bb3732b98d5e32412555322ce7a800;
@@ -56,6 +70,9 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     // Initialization Functions
     //==============================================================================
 
+    //! TODO: should this be a public function with _ prefix?
+    /// @notice The ```_initializeAgoraCompoundingOracle``` function initializes the AgoraCompoundingOracleStorage struct
+    /// @dev initialization is called on the same transaction as the deployment of the pair
     function _initializeAgoraCompoundingOracle() public {
         _getPointerToAgoraCompoundingOracleStorage().perSecondInterestRate = uint112(0);
         _getPointerToAgoraCompoundingOracleStorage().lastUpdated = (block.timestamp).toUint32();
@@ -66,6 +83,11 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     // View Functions
     //==============================================================================
 
+    /// @notice Emitted when the price bounds are set
+    /// @param minBasePrice The minimum allowed initial base price
+    /// @param maxBasePrice The maximum allowed initial base price
+    /// @param minAnnualizedInterestRate The minimum allowed annualized interest rate
+    /// @param maxAnnualizedInterestRate The maximum allowed annualized interest rate
     event SetOraclePriceBounds(
         uint256 minBasePrice,
         uint256 maxBasePrice,
@@ -73,6 +95,12 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         uint256 maxAnnualizedInterestRate
     );
 
+    /// @notice The ```setOraclePriceBounds``` function sets the price bounds for the pair
+    /// @dev Only the admin can set the price bounds
+    /// @param _minBasePrice The minimum allowed initial base price
+    /// @param _maxBasePrice The maximum allowed initial base price
+    /// @param _minAnnualizedInterestRate The minimum allowed annualized interest rate
+    /// @param _maxAnnualizedInterestRate The maximum allowed annualized interest rate
     function setOraclePriceBounds(
         uint256 _minBasePrice,
         uint256 _maxBasePrice,
@@ -99,8 +127,15 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         });
     }
 
+    /// @notice Emitted when the price is configured
+    /// @param basePrice The base price of the pair
+    /// @param annualizedInterestRate The annualized interest rate
     event ConfigureOraclePrice(uint256 basePrice, uint256 annualizedInterestRate);
 
+    /// @notice The ```configureOraclePrice``` function configures the price of the pair
+    /// @dev Only the price setter can configure the price
+    /// @param _basePrice The base price of the pair
+    /// @param _annualizedInterestRate The annualized interest rate
     function configureOraclePrice(uint256 _basePrice, uint256 _annualizedInterestRate) external {
         _requireSenderIsRole({ _role: PRICE_SETTER_ROLE });
 
@@ -125,6 +160,12 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         emit ConfigureOraclePrice(_basePrice, _annualizedInterestRate);
     }
 
+    /// @notice The ```getCompoundingPrice``` function calculates the current price of the pair using a simple compounding model
+    /// @param _lastUpdated The timestamp of the last price update
+    /// @param _currentTimestamp The current timestamp
+    /// @param _interestRate The per second interest rate
+    /// @param _basePrice The base price of the pair
+    /// @return _currentPrice The current price of the pair
     function getCompoundingPrice(
         uint256 _lastUpdated,
         uint256 _currentTimestamp,
@@ -137,6 +178,8 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         _currentPrice = (_basePrice + _interestRate * timeElapsed);
     }
 
+    /// @notice The ```getPrice``` function returns the current price of the pair
+    /// @return _currentPrice The current price of the pair
     function getPrice() public view virtual returns (uint256 _currentPrice) {
         AgoraCompoundingOracleStorage memory _storage = _getPointerToAgoraCompoundingOracleStorage();
         uint256 _lastUpdated = _storage.lastUpdated;

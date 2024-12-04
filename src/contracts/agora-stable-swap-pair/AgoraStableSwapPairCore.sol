@@ -23,6 +23,14 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+/// @notice The ```InitializeParams``` struct is used to initialize the AgoraStableSwapPair
+/// @param token0 The address of the first token in the pair
+/// @param token1 The address of the second token in the pair
+/// @param token0PurchaseFee The purchase fee for the first token in the pair
+/// @param token1PurchaseFee The purchase fee for the second token in the pair
+/// @param initialFeeSetter The address of the initial fee setter
+/// @param initialTokenReceiver The address of the initial token receiver
+/// @param initialAdminAddress The address of the initial admin
 struct InitializeParams {
     address token0;
     address token1;
@@ -33,6 +41,9 @@ struct InitializeParams {
     address initialAdminAddress;
 }
 
+/// @title AgoraStableSwapPairCore
+/// @notice The AgoraStableSwapPairCore is a contract that manages the core logic for the AgoraStableSwapPair
+/// @author Agora
 contract AgoraStableSwapPairCore is
     AgoraStableSwapPairStorage,
     AgoraStableSwapAccessControl,
@@ -68,6 +79,9 @@ contract AgoraStableSwapPairCore is
         _disableInitializers();
     }
 
+    /// @notice The ```initialize``` function initializes the AgoraStableSwapPairCore contract
+    /// @dev This function is called on the same transaction as the deployment of the contract
+    /// @param _params The parameters for the initialization
     function initialize(InitializeParams memory _params) public initializer {
         // Initialize the access control and oracle
         _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
@@ -111,6 +125,10 @@ contract AgoraStableSwapPairCore is
     // Internal Helper Functions
     //==============================================================================
 
+    /// @notice The ```_requireValidPath``` function checks that the path is valid
+    /// @param _path The path to check
+    /// @param _token0 The address of the first token in the pair
+    /// @param _token1 The address of the second token in the pair
     function _requireValidPath(address[] memory _path, address _token0, address _token1) internal pure {
         // Checks: path length is 2
         if (_path.length != 2) revert InvalidPath();
@@ -126,6 +144,11 @@ contract AgoraStableSwapPairCore is
         }
     }
 
+    /// @notice The ```getAmount0In``` function calculates the amount of input token0In required for a given amount token1Out
+    /// @param _amountOut The amount of output token1
+    /// @param _price The price of the pair expressed as token0 over token1
+    /// @param _purchaseFeeToken0 The purchase fee for the token0
+    /// @return _amountIn The amount of input token0
     function _getAmount0In(
         uint256 _amountOut,
         uint256 _price,
@@ -134,6 +157,11 @@ contract AgoraStableSwapPairCore is
         _amountIn = (_amountOut * _price) / ((PRECISION - _purchaseFeeToken0) * PRECISION);
     }
 
+    /// @notice The ```_getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
+    /// @param _amountOut The amount of output token0
+    /// @param _price The price of the pair expressed as token0 over token1
+    /// @param _purchaseFeeToken1 The purchase fee for the token1
+    /// @return _amountIn The amount of input token1
     function _getAmount1In(
         uint256 _amountOut,
         uint256 _price,
@@ -142,6 +170,11 @@ contract AgoraStableSwapPairCore is
         _amountIn = _amountOut / ((PRECISION - _purchaseFeeToken1) * _price);
     }
 
+    /// @notice The ```_getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
+    /// @param _amountIn The amount of input token1
+    /// @param _price The price of the pair expressed as token0 over token1
+    /// @param _purchaseFeeToken0 The purchase fee for the token0
+    /// @return _amountOut The amount of output token0
     function _getAmount0Out(
         uint256 _amountIn,
         uint256 _price,
@@ -150,6 +183,11 @@ contract AgoraStableSwapPairCore is
         _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken0) * _price) / PRECISION;
     }
 
+    /// @notice The ```_getAmount1Out``` function calculates the amount of output token1Out returned from a given amount of input token0In
+    /// @param _amountIn The amount of input token0
+    /// @param _price The price of the pair expressed as token0 over token1
+    /// @param _purchaseFeeToken1 The purchase fee for the token1
+    /// @return _amountOut The amount of output token1
     function _getAmount1Out(
         uint256 _amountIn,
         uint256 _price,
@@ -171,6 +209,12 @@ contract AgoraStableSwapPairCore is
         address indexed to
     );
 
+    /// @notice The ```swap``` function swaps tokens in the pair
+    /// @dev This function has a modifier that prevents reentrancy
+    /// @param _amount0Out The amount of token0 to send out
+    /// @param _amount1Out The amount of token1 to send out
+    /// @param _to The address to send the tokens to
+    /// @param _data The data to send to the callback
     function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes memory _data) public nonreentrant {
         _requireSenderIsRole({ _role: APPROVED_SWAPPER });
 
@@ -237,6 +281,12 @@ contract AgoraStableSwapPairCore is
         });
     }
 
+    /// @notice The ```swapExactTokensForTokens``` function swaps an exact amount of input tokenIn for an amount of output tokenOut
+    /// @param _amountIn The amount of input tokenIn
+    /// @param _amountOutMin The minimum amount of output tokenOut
+    /// @param _path The path of the tokens
+    /// @param _to The address to send the tokens to
+    /// @param _deadline The deadline for the swap
     function swapExactTokensForTokens(
         uint256 _amountIn,
         uint256 _amountOutMin,
@@ -273,6 +323,12 @@ contract AgoraStableSwapPairCore is
         }
     }
 
+    /// @notice The ```swapTokensForExactTokens``` function swaps an amount of output tokenOut for an exact amount of input tokenIn
+    /// @param _amountOut The amount of output tokenOut
+    /// @param _amountInMax The maximum amount of input tokenIn
+    /// @param _path The path of the tokens
+    /// @param _to The address to send the tokens to
+    /// @param _deadline The deadline for the swap
     function swapTokensForExactTokens(
         uint256 _amountOut,
         uint256 _amountInMax,
@@ -307,11 +363,16 @@ contract AgoraStableSwapPairCore is
         }
     }
 
+    /// @notice The ```sync``` function syncs the reserves of the pair
+    /// @dev This function is used to sync the reserves of the pair
     function sync() external {
         SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
         _sync(IERC20(_storage.token0).balanceOf(address(this)), IERC20(_storage.token1).balanceOf(address(this)));
     }
 
+    /// @notice The ```_sync``` function syncs the reserves of the pair
+    /// @param _token0balance The balance of token0
+    /// @param _token1Balance The balance of token1
     function _sync(uint256 _token0balance, uint256 _token1Balance) internal {
         _getPointerToAgoraStableSwapStorage().swapStorage.reserve0 = _token0balance.toUint112();
         _getPointerToAgoraStableSwapStorage().swapStorage.reserve1 = _token1Balance.toUint112();
@@ -321,8 +382,12 @@ contract AgoraStableSwapPairCore is
     // Privileged Configuration Functions
     //==============================================================================
 
+    /// @notice The ```SetTokenReceiver``` event is emitted when the token receiver is set
+    /// @param tokenReceiver The address of the token receiver
     event SetTokenReceiver(address indexed tokenReceiver);
 
+    /// @notice The ```setTokenReceiver``` function sets the token receiver
+    /// @param _tokenReceiver The address of the token receiver
     function setTokenReceiver(address _tokenReceiver) public {
         // Checks: Only the admin can set the token receiver
         _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
@@ -334,19 +399,30 @@ contract AgoraStableSwapPairCore is
         emit SetTokenReceiver({ tokenReceiver: _tokenReceiver });
     }
 
+    /// @notice The ```SetApprovedSwapper``` event is emitted when the approved swapper is set
+    /// @param approvedSwapper The address of the approved swapper
+    /// @param isApproved The boolean value indicating whether the swapper is approved
     event SetApprovedSwapper(address indexed approvedSwapper, bool isApproved);
 
-    function setApprovedSwapper(address _approvedSwapper, bool _isApproved) public {
+    /// @notice The ```setApprovedSwapper``` function sets the approved swapper
+    /// @param _approvedSwapper The address of the approved swapper
+    /// @param _setApproved The boolean value indicating whether the swapper is approved
+    function setApprovedSwapper(address _approvedSwapper, bool _setApproved) public {
         // Checks: Only the whitelister can set the approved swapper
         _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
 
         // Effects: Set the isApproved state
-        _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwapper, _addRole: _isApproved });
+        _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwapper, _addRole: _setApproved });
 
         // emit event
-        emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _isApproved });
+        emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _setApproved });
     }
 
+    /// @notice The ```SetFeeBounds``` event is emitted when the fee bounds are set
+    /// @param minToken0PurchaseFee The minimum purchase fee for token0
+    /// @param maxToken0PurchaseFee The maximum purchase fee for token0
+    /// @param minToken1PurchaseFee The minimum purchase fee for token1
+    /// @param maxToken1PurchaseFee The maximum purchase fee for token1
     event SetFeeBounds(
         uint256 minToken0PurchaseFee,
         uint256 maxToken0PurchaseFee,
@@ -354,6 +430,11 @@ contract AgoraStableSwapPairCore is
         uint256 maxToken1PurchaseFee
     );
 
+    /// @notice The ```setFeeBounds``` function sets the fee bounds
+    /// @param minToken0PurchaseFee The minimum purchase fee for token0
+    /// @param maxToken0PurchaseFee The maximum purchase fee for token0
+    /// @param minToken1PurchaseFee The minimum purchase fee for token1
+    /// @param maxToken1PurchaseFee The maximum purchase fee for token1
     function setFeeBounds(
         uint256 minToken0PurchaseFee,
         uint256 maxToken0PurchaseFee,
@@ -377,8 +458,14 @@ contract AgoraStableSwapPairCore is
         });
     }
 
+    /// @notice The ```SetTokenPurchaseFee``` event is emitted when the token purchase fee is set
+    /// @param token The address of the token
+    /// @param tokenPurchaseFee The purchase fee for the token
     event SetTokenPurchaseFee(address indexed token, uint256 tokenPurchaseFee);
 
+    /// @notice The ```setTokenPurchaseFee``` function sets the token purchase fee
+    /// @param _token The address of the token
+    /// @param _tokenPurchaseFee The purchase fee for the token
     function setTokenPurchaseFee(address _token, uint256 _tokenPurchaseFee) public {
         // Checks: Only the fee setter can set the fee
         _requireIsRole({ _role: FEE_SETTER_ROLE, _address: msg.sender });
@@ -404,8 +491,14 @@ contract AgoraStableSwapPairCore is
         emit SetTokenPurchaseFee({ token: _token, tokenPurchaseFee: _tokenPurchaseFee });
     }
 
+    /// @notice The ```RemoveTokens``` event is emitted when tokens are removed
+    /// @param tokenAddress The address of the token
+    /// @param amount The amount of tokens to remove
     event RemoveTokens(address indexed tokenAddress, uint256 amount);
 
+    /// @notice The ```removeTokens``` function removes tokens from the pair
+    /// @param _tokenAddress The address of the token
+    /// @param _amount The amount of tokens to remove
     function removeTokens(address _tokenAddress, uint256 _amount) external {
         // Checks: Only the token remover can remove tokens
         _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
@@ -429,8 +522,15 @@ contract AgoraStableSwapPairCore is
         emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
     }
 
+    /// @notice The ```AddTokens``` event is emitted when tokens are added
+    /// @param tokenAddress The address of the token
+    /// @param from The address of the sender
+    /// @param amount The amount of tokens to add
     event AddTokens(address indexed tokenAddress, address from, uint256 amount);
 
+    /// @notice The ```addTokens``` function adds tokens to the pair
+    /// @param _tokenAddress The address of the token
+    /// @param _amount The amount of tokens to add
     function addTokens(address _tokenAddress, uint256 _amount) external {
         SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
 
@@ -449,9 +549,13 @@ contract AgoraStableSwapPairCore is
         emit AddTokens({ tokenAddress: _tokenAddress, from: msg.sender, amount: _amount });
     }
 
+    /// @notice The ```SetPaused``` event is emitted when the pair is paused
+    /// @param isPaused The boolean value indicating whether the pair is paused
     event SetPaused(bool isPaused);
 
-    function setPaused(bool _isPaused) public {
+    /// @notice The ```setPaused``` function sets the paused state of the pair
+    /// @param _setPaused The boolean value indicating whether the pair is paused
+    function setPaused(bool _setPaused) public {
         // Checks: Only the pauser can pause the pair
         _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
 
@@ -459,7 +563,7 @@ contract AgoraStableSwapPairCore is
         _getPointerToAgoraStableSwapStorage().swapStorage.isPaused = _isPaused;
 
         // emit event
-        emit SetPaused({ isPaused: _isPaused });
+        emit SetPaused({ isPaused: _setPaused });
     }
 
     // ============================================================================================
@@ -486,11 +590,9 @@ contract AgoraStableSwapPairCore is
     error AmountOutInsufficient();
 
     /// @notice Emitted when the amountInMax is less than the amountIn
-    error AmountInMaxExceeded();
+    error AmountOutInsufficient(uint256 provided, uint256 minimum);
 
-    /// @notice Emitted when no tokens are received
-    error InsufficientInputAmount();
-
+    /// @notice Emitted when the amountInMax is less than the amountIn
     /// @notice Emitted when the reserve is insufficient
     error InsufficientLiquidity();
 
