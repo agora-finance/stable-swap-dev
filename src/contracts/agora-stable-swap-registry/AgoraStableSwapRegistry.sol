@@ -54,8 +54,11 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
     /// @param _isRegistered the boolean value indicating whether the swap is registered
     function setSwapAddress(address _swapAddress, bool _isRegistered) external {
         _requireSenderIsRole({ _role: BOOKKEEPER_ROLE });
-        if (_isRegistered) _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.add(_swapAddress);
-        else _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.remove(_swapAddress);
+        if (_isRegistered) {
+            _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.add({ value: _swapAddress });
+        } else {
+            _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.remove({ value: _swapAddress });
+        }
     }
 
     /// @notice the ```executeOnRegisteredAddresses``` function executes a function call on all registered swap addresses

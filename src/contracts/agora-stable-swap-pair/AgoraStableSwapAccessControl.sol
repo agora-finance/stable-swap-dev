@@ -41,13 +41,13 @@ contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @dev This function adds the default roles that are required by the AgoraStableSwapPair
     /// @param _initialAdminAddress The address of the initial admin
     function _initializeAgoraStableSwapAccessControl(address _initialAdminAddress) internal {
-        _initializeAgoraAccessControl(_initialAdminAddress);
+        _initializeAgoraAccessControl({ _initialAdminAddress: _initialAdminAddress });
         // Set the default roles
-        AgoraAccessControl._addRoleToSet(WHITELISTER_ROLE);
-        AgoraAccessControl._addRoleToSet(FEE_SETTER_ROLE);
-        AgoraAccessControl._addRoleToSet(TOKEN_REMOVER_ROLE);
-        AgoraAccessControl._addRoleToSet(PAUSER_ROLE);
-        AgoraAccessControl._addRoleToSet(APPROVED_SWAPPER);
-        AgoraAccessControl._addRoleToSet(PRICE_SETTER_ROLE);
+        AgoraAccessControl._addRoleToSet({ _role: WHITELISTER_ROLE });
+        AgoraAccessControl._addRoleToSet({ _role: FEE_SETTER_ROLE });
+        AgoraAccessControl._addRoleToSet({ _role: TOKEN_REMOVER_ROLE });
+        AgoraAccessControl._addRoleToSet({ _role: PAUSER_ROLE });
+        AgoraAccessControl._addRoleToSet({ _role: APPROVED_SWAPPER });
+        AgoraAccessControl._addRoleToSet({ _role: PRICE_SETTER_ROLE });
     }
 }

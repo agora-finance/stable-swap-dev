@@ -30,12 +30,12 @@ contract AgoraStableSwapRegistryAccessControl is AgoraAccessControl {
     /// @notice the ```_initializeAgoraStableSwapRegistryAccessControl``` function initializes the AgoraStableSwapRegistryAccessControl contract
     /// @param _initialAdminAddress the address of the initial admin
     function _initializeAgoraStableSwapRegistryAccessControl(address _initialAdminAddress) internal {
-        _initializeAgoraAccessControl(_initialAdminAddress);
+        _initializeAgoraAccessControl({ _initialAdminAddress: _initialAdminAddress });
 
         // ! TODO: should this be called direclty since its inherited?
         // Set the default roles
-        AgoraAccessControl._addRoleToSet(WHITELISTER_ROLE);
-        AgoraAccessControl._addRoleToSet(BOOKKEEPER_ROLE);
-        AgoraAccessControl._addRoleToSet(PAUSER_ROLE);
+        AgoraAccessControl._addRoleToSet({ _role: WHITELISTER_ROLE });
+        AgoraAccessControl._addRoleToSet({ _role: BOOKKEEPER_ROLE });
+        AgoraAccessControl._addRoleToSet({ _role: PAUSER_ROLE });
     }
 }
