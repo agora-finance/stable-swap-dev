@@ -14,7 +14,7 @@ pragma solidity ^0.8.28;
 
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
 
-import { IUniswapV2Callee } from "../interfaces/IUniswapV2Callee.sol";
+import { IUniswapV2Callee } from "./interfaces/IUniswapV2Callee.sol";
 
 import { AgoraCompoundingOracle } from "./AgoraCompoundingOracle.sol";
 import { AgoraStableSwapPairStorage } from "./AgoraStableSwapPairStorage.sol";
@@ -125,7 +125,7 @@ contract AgoraStableSwapPairCore is
     // Internal Helper Functions
     //==============================================================================
 
-    /// @notice The ```_requireValidPath``` function checks that the path is valid
+    /// @notice The ```requireValidPath``` function checks that the path is valid
     /// @param _path The path to check
     /// @param _token0 The address of the first token in the pair
     /// @param _token1 The address of the second token in the pair
@@ -151,7 +151,7 @@ contract AgoraStableSwapPairCore is
         _amountIn = (_amountOut * _token0OverToken1Price) / ((PRECISION - _token1PurchaseFee) * PRECISION);
     }
 
-    /// @notice The ```_getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
+    /// @notice The ```getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
     /// @param _amountOut The amount of output token0
     /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
     /// @param _token0PurchaseFee The purchase fee for the token1
@@ -164,7 +164,7 @@ contract AgoraStableSwapPairCore is
         _amountIn = _amountOut / ((PRECISION - _token0PurchaseFee) * _token0OverToken1Price);
     }
 
-    /// @notice The ```_getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
+    /// @notice The ```getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
     /// @param _amountIn The amount of input token1
     /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
     /// @param _token0PurchaseFee The purchase fee for the token0
@@ -177,7 +177,7 @@ contract AgoraStableSwapPairCore is
         _amountOut = (_amountIn * (PRECISION - _token0PurchaseFee) * _token0OverToken1Price) / PRECISION;
     }
 
-    /// @notice The ```_getAmount1Out``` function calculates the amount of output token1Out returned from a given amount of input token0In
+    /// @notice The ```getAmount1Out``` function calculates the amount of output token1Out returned from a given amount of input token0In
     /// @param _amountIn The amount of input token0
     /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
     /// @param _token1PurchaseFee The purchase fee for the token1
@@ -256,11 +256,11 @@ contract AgoraStableSwapPairCore is
         // Checks:: Final invariant, ensure that we received the correct amount of tokens
         if (_amount0Out > 0) {
             // we are sending token0 out, receiving token1 In
-            uint256 _expectedAmount1In = _getAmount1In(_amount0Out, _token0OverToken1Price, _storage.token0PurchaseFee);
+            uint256 _expectedAmount1In = getAmount1In(_amount0Out, _token0OverToken1Price, _storage.token0PurchaseFee);
             if (_expectedAmount1In < _token1In) revert InsufficientInputAmount();
         } else {
             // we are sending token1 out, receiving token0 in
-            uint256 _expectedAmount0In = _getAmount0In(_amount1Out, _token0OverToken1Price, _storage.token1PurchaseFee);
+            uint256 _expectedAmount0In = getAmount0In(_amount1Out, _token0OverToken1Price, _storage.token1PurchaseFee);
             if (_expectedAmount0In < _token0In) revert InsufficientInputAmount();
         }
 
@@ -298,13 +298,13 @@ contract AgoraStableSwapPairCore is
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
-        _requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+        requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
         // Calculations: determine amounts based on path
 
         uint256 _amountOut = _path[1] == _storage.token0
-            ? _getAmount0Out(_amountIn, _token0OverToken1Price, _storage.token0PurchaseFee)
-            : _getAmount1Out(_amountIn, _token0OverToken1Price, _storage.token1PurchaseFee);
+            ? getAmount0Out(_amountIn, _token0OverToken1Price, _storage.token0PurchaseFee)
+            : getAmount1Out(_amountIn, _token0OverToken1Price, _storage.token1PurchaseFee);
 
         // Checks: amountOut must not be smaller than the amountOutMin
         if (_amountOut < _amountOutMin) revert InsufficientOutputAmount();
@@ -340,12 +340,12 @@ contract AgoraStableSwapPairCore is
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
-        _requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+        requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
         // Calculations: determine amounts based on path
         uint256 _amountIn = _path[0] == _storage.token0
-            ? _getAmount0In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee)
-            : _getAmount1In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee);
+            ? getAmount0In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee)
+            : getAmount1In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee);
         // Checks: amountInMax must be larger or equal to than the amountIn
         if (_amountIn > _amountInMax) revert ExcessiveInputAmount();
 

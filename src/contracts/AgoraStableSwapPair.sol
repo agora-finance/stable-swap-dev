@@ -88,7 +88,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
-        _requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+        requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
         // instantiate return variables
         _amounts = new uint256[](2);
@@ -96,13 +96,13 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
 
         // path[1] represents our tokenOut
         if (_path[1] == _storage.token0) {
-            _amounts[1] = _getAmount0Out({
+            _amounts[1] = getAmount0Out({
                 _amountIn: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token0PurchaseFee: _storage.token0PurchaseFee
             });
         } else {
-            _amounts[1] = _getAmount1Out({
+            _amounts[1] = getAmount1Out({
                 _amountIn: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token1PurchaseFee: _storage.token1PurchaseFee
@@ -124,7 +124,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
-        _requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+        requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
         // instantiate return variables
         _amounts = new uint256[](2);
@@ -133,13 +133,13 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
 
         // path[0] represents our tokenIn
         if (_path[0] == _storage.token0) {
-            _amounts[0] = _getAmount0In({
+            _amounts[0] = getAmount0In({
                 _amountOut: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token1PurchaseFee: _storage.token1PurchaseFee
             });
         } else {
-            _amounts[0] = _getAmount1In({
+            _amounts[0] = getAmount1In({
                 _amountOut: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token0PurchaseFee: _storage.token0PurchaseFee

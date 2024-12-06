@@ -1,6 +1,6 @@
 {
   "author": "Drake Evans (x.com/drakeevansv1)",
-  "name": "agora-stable-swap",
+  "name": "@agora-finance/stable-swap",
   "version": "0.0.1",
   "description": "Contracts for Agora stable-swaps",
   "scripts": {

@@ -12,11 +12,10 @@ pragma solidity ^0.8.28;
 // ================== deployAgoraStableSwapContracts ==================
 // ====================================================================
 
-import { AgoraStableSwapPair } from "contracts/agora-stable-swap-pair/AgoraStableSwapPair.sol";
-import { AgoraStableSwapPairCore, InitializeParams as AgoraStableSwapPairParams } from "contracts/agora-stable-swap-pair/AgoraStableSwapPairCore.sol";
+import { AgoraStableSwapPair } from "contracts/AgoraStableSwapPair.sol";
+import { AgoraStableSwapPairCore, InitializeParams as AgoraStableSwapPairParams } from "contracts/AgoraStableSwapPairCore.sol";
 
 import { AgoraTransparentUpgradeableProxy, ConstructorParams as AgoraTransparentUpgradeableProxyParams } from "agora-contracts/proxy/AgoraTransparentUpgradeableProxy.sol";
-import { AgoraStableSwapRegistry } from "contracts/agora-stable-swap-registry/AgoraStableSwapRegistry.sol";
 
 /// @notice The ```DeployAgoraStableSwapPairReturn``` struct is used to return the address of the AgoraStableSwapPair implementation and the address of the AgoraStableSwapPair
 /// @param agoraStableSwapPairImplementation The address of the AgoraStableSwapPair implementation
@@ -46,36 +45,5 @@ function deployAgoraStableSwapPair(
         DeployAgoraStableSwapPairReturn({
             agoraStableSwapPairImplementation: address(_pair),
             agoraStableSwapPair: address(_pairProxy)
-        });
-}
-
-/// @notice The ```DeployAgoraStableSwapRegistryReturn``` struct is used to return the address of the AgoraStableSwapRegistry implementation and the address of the AgoraStableSwapRegistry
-/// @param agoraStableSwapRegistryImplementation The address of the AgoraStableSwapRegistry implementation
-/// @param agoraStableSwapRegistry The address of the AgoraStableSwapRegistry
-struct DeployAgoraStableSwapRegistryReturn {
-    address agoraStableSwapRegistryImplementation;
-    address agoraStableSwapRegistry;
-}
-
-/// @notice The ```deployAgoraStableSwapRegistry``` function is used to deploy the AgoraStableSwapRegistry contract
-/// @param _proxyAdminAddress The address of the proxy admin
-/// @param _initialAdminAddress The address of the initial admin
-/// @return The address of the AgoraStableSwapRegistry implementation and the address of the AgoraStableSwapRegistry
-function deployAgoraStableSwapRegistry(
-    address _proxyAdminAddress,
-    address _initialAdminAddress
-) returns (DeployAgoraStableSwapRegistryReturn memory) {
-    AgoraStableSwapRegistry _registry = new AgoraStableSwapRegistry();
-    AgoraTransparentUpgradeableProxy _registryProxy = new AgoraTransparentUpgradeableProxy(
-        AgoraTransparentUpgradeableProxyParams({
-            logic: address(_registry),
-            proxyAdminAddress: _proxyAdminAddress,
-            data: abi.encodeWithSelector(AgoraStableSwapRegistry.initialize.selector, _initialAdminAddress)
-        })
-    );
-    return
-        DeployAgoraStableSwapRegistryReturn({
-            agoraStableSwapRegistryImplementation: address(_registry),
-            agoraStableSwapRegistry: address(_registryProxy)
         });
 }

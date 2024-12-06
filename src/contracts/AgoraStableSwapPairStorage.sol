@@ -75,9 +75,9 @@ contract AgoraStableSwapPairStorage {
     bytes32 public constant AGORA_STABLE_SWAP_STORAGE_SLOT =
         0x7bec511bd7f6687e2731c8fe683a8e6468bf371b3ebd503eee87dd5465b4a500;
 
-    /// @notice The ```_getPointerToAgoraStableSwapStorage``` function returns a pointer to the AgoraStableSwapStorage struct
+    /// @notice The ```getPointerToAgoraStableSwapStorage``` function returns a pointer to the AgoraStableSwapStorage struct
     /// @return $ A pointer to the AgoraStableSwapStorage struct
-    function getPointerToAgoraStableSwapStorage() public pure returns (AgoraStableSwapStorage storage $) {
+    function _getPointerToAgoraStableSwapStorage() internal view returns (AgoraStableSwapStorage storage $) {
         /// @solidity memory-safe-assembly
         assembly {
             $.slot := AGORA_STABLE_SWAP_STORAGE_SLOT
