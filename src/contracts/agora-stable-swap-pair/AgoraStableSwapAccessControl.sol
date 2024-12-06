@@ -30,7 +30,6 @@ contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @notice the PAUSER_ROLE identifier
     string public constant PAUSER_ROLE = "PAUSER_ROLE";
 
-    //! TODO: APPROVED_SWAPPER_ROLE?
     /// @notice the APPROVED_SWAPPER identifier
     string public constant APPROVED_SWAPPER = "APPROVED_SWAPPER";
 

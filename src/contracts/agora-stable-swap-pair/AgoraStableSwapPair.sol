@@ -62,12 +62,6 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         return _getPointerToAgoraStableSwapStorage().swapStorage.isPaused;
     }
 
-    /// @notice The ```token0OverToken1Price``` function returns the price of the pair expressed as token0 over token1
-    /// @return _token0OverToken1Price The price of the pair expressed as token0 over token1
-    function token0OverToken1Price() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().swapStorage.token0OverToken1Price;
-    }
-
     /// @notice The ```reserve0``` function returns the reserve of the token0 in the pair
     /// @return _reserve0 The reserve of the token0 in the pair
     function reserve0() public view returns (uint256) {
@@ -81,7 +75,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
     }
 
     /// @notice The ```getAmountsOut``` function calculates the amount of tokenOut returned from a given amount of tokenIn
-    /// @param _empty The address of the empty address // ! TODO: check if this is correct
+    /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountIn The amount of input tokenIn
     /// @param _path The path of the tokens
     /// @return _amounts The amount of returned output tokenOut
@@ -117,7 +111,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
     }
 
     /// @notice The ```getAmountsIn``` function calculates the amount of input tokensIn required for a given amount tokensOut
-    /// @param _empty The address of the empty address // ! TODO: check if this is correct
+    /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountOut The amount of output tokenOut
     /// @param _path The path of the tokens
     /// @return _amounts The amount of required input tokenIn
@@ -142,13 +136,13 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
             _amounts[0] = _getAmount0In({
                 _amountOut: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
-                _token0PurchaseFee: _storage.token0PurchaseFee
+                _token1PurchaseFee: _storage.token1PurchaseFee
             });
         } else {
             _amounts[0] = _getAmount1In({
                 _amountOut: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
-                _token1PurchaseFee: _storage.token1PurchaseFee
+                _token0PurchaseFee: _storage.token0PurchaseFee
             });
         }
     }

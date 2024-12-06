@@ -58,17 +58,21 @@ contract AgoraStableSwapRegistry is Initializable, AgoraStableSwapRegistryAccess
     // External Stateful Functions
     //==============================================================================
 
-    // ! TODO: should this function emit an event?
+    event SetSwapAddress(address swapAddress, bool setIsRegistered);
+
     /// @notice the ```registerSwapAddress``` function registers a swap address
     /// @param _swapAddress the address of the swap to register
-    /// @param _isRegistered the boolean value indicating whether the swap is registered
-    function setSwapAddress(address _swapAddress, bool _isRegistered) external {
+    /// @param _setIsRegistered the boolean value indicating whether the swap is registered
+    function setSwapAddress(address _swapAddress, bool _setIsRegistered) external {
         _requireSenderIsRole({ _role: BOOKKEEPER_ROLE });
-        if (_isRegistered) {
+
+        if (_setIsRegistered) {
             _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.add({ value: _swapAddress });
         } else {
             _getPointerToAgoraStableSwapRegistryStorage().registeredSwapAddresses.remove({ value: _swapAddress });
         }
+
+        emit SetSwapAddress({ swapAddress: _swapAddress, setIsRegistered: _setIsRegistered });
     }
 
     /// @notice the ```executeOnRegisteredAddresses``` function executes a function call on all registered swap addresses

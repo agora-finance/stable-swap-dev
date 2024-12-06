@@ -129,66 +129,65 @@ contract AgoraStableSwapPairCore is
     /// @param _path The path to check
     /// @param _token0 The address of the first token in the pair
     /// @param _token1 The address of the second token in the pair
-    function _requireValidPath(address[] memory _path, address _token0, address _token1) internal pure {
+    function requireValidPath(address[] memory _path, address _token0, address _token1) public pure {
         // Checks: path length is 2
         if (_path.length != 2) revert InvalidPath();
 
-        // ! TODO: do we want to allow token1 to be on path[0]
-        if (_path[0] == _token0 && _path[1] == _token1) return;
-        else if (_path[0] == _token1 && _path[1] == _token0) return;
-        revert InvalidPath();
+        if (!(_path[0] == _token0 && _path[1] == _token1) || !(_path[0] == _token1 && _path[1] == _token0)) {
+            revert InvalidPath();
+        }
     }
 
     /// @notice The ```getAmount0In``` function calculates the amount of input token0In required for a given amount token1Out
     /// @param _amountOut The amount of output token1
-    /// @param _price The price of the pair expressed as token0 over token1
-    /// @param _purchaseFeeToken0 The purchase fee for the token0
+    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
+    /// @param _token1PurchaseFee The purchase fee for the token0
     /// @return _amountIn The amount of input token0
-    function _getAmount0In(
+    function getAmount0In(
         uint256 _amountOut,
-        uint256 _price,
-        uint256 _purchaseFeeToken0
-    ) internal pure returns (uint256 _amountIn) {
-        _amountIn = (_amountOut * _price) / ((PRECISION - _purchaseFeeToken0) * PRECISION);
+        uint256 _token0OverToken1Price,
+        uint256 _token1PurchaseFee
+    ) public pure returns (uint256 _amountIn) {
+        _amountIn = (_amountOut * _token0OverToken1Price) / ((PRECISION - _token1PurchaseFee) * PRECISION);
     }
 
     /// @notice The ```_getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
     /// @param _amountOut The amount of output token0
-    /// @param _price The price of the pair expressed as token0 over token1
-    /// @param _purchaseFeeToken1 The purchase fee for the token1
+    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
+    /// @param _token0PurchaseFee The purchase fee for the token1
     /// @return _amountIn The amount of input token1
-    function _getAmount1In(
+    function getAmount1In(
         uint256 _amountOut,
-        uint256 _price,
-        uint256 _purchaseFeeToken1
-    ) internal pure returns (uint256 _amountIn) {
-        _amountIn = _amountOut / ((PRECISION - _purchaseFeeToken1) * _price);
+        uint256 _token0OverToken1Price,
+        uint256 _token0PurchaseFee
+    ) public pure returns (uint256 _amountIn) {
+        _amountIn = _amountOut / ((PRECISION - _token0PurchaseFee) * _token0OverToken1Price);
     }
 
     /// @notice The ```_getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
     /// @param _amountIn The amount of input token1
-    /// @param _price The price of the pair expressed as token0 over token1
-    /// @param _purchaseFeeToken0 The purchase fee for the token0
+    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
+    /// @param _token0PurchaseFee The purchase fee for the token0
     /// @return _amountOut The amount of output token0
-    function _getAmount0Out(
+    function getAmount0Out(
         uint256 _amountIn,
-        uint256 _price,
-        uint256 _purchaseFeeToken0
-    ) internal pure returns (uint256 _amountOut) {
-        _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken0) * _price) / PRECISION;
+        uint256 _token0OverToken1Price,
+        uint256 _token0PurchaseFee
+    ) public pure returns (uint256 _amountOut) {
+        _amountOut = (_amountIn * (PRECISION - _token0PurchaseFee) * _token0OverToken1Price) / PRECISION;
     }
 
     /// @notice The ```_getAmount1Out``` function calculates the amount of output token1Out returned from a given amount of input token0In
     /// @param _amountIn The amount of input token0
-    /// @param _price The price of the pair expressed as token0 over token1
-    /// @param _purchaseFeeToken1 The purchase fee for the token1
+    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
+    /// @param _token1PurchaseFee The purchase fee for the token1
     /// @return _amountOut The amount of output token1
-    function _getAmount1Out(
+    function getAmount1Out(
         uint256 _amountIn,
-        uint256 _price,
-        uint256 _purchaseFeeToken1
-    ) internal pure returns (uint256 _amountOut) {
-        _amountOut = (_amountIn * (PRECISION - _purchaseFeeToken1)) / _price;
+        uint256 _token0OverToken1Price,
+        uint256 _token1PurchaseFee
+    ) public pure returns (uint256 _amountOut) {
+        _amountOut = (_amountIn * (PRECISION - _token1PurchaseFee)) / _token0OverToken1Price;
     }
 
     //==============================================================================
@@ -212,7 +211,6 @@ contract AgoraStableSwapPairCore is
     /// @param _data The data to send to the callback
     function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes memory _data) public nonreentrant {
         _requireSenderIsRole({ _role: APPROVED_SWAPPER });
-        // ! TODO: check wether the pair is paused?
 
         // Checks: input sanitation, force one amountOut to be 0, and the other to be > 0
         if ((_amount0Out != 0 && _amount1Out != 0) || (_amount0Out == 0 && _amount1Out == 0)) {
@@ -222,6 +220,9 @@ contract AgoraStableSwapPairCore is
         // Cache information about the pair for gas savings
         SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
+
+        //Checks: ensure pair not paused
+        if (_storage.isPaused) revert PairIsPaused();
 
         // Checks: proper liquidity available, NOTE: we allow emptying the pair
         if (_amount0Out > _storage.reserve0 || _amount1Out > _storage.reserve1) revert InsufficientLiquidity();
@@ -266,7 +267,6 @@ contract AgoraStableSwapPairCore is
         // Update reserves
         _sync(_finalToken0Balance, _finalToken1Balance);
 
-        // ! TODO: is this event declared anywhere? overload?
         // emit event
         emit Swap({
             sender: msg.sender,
@@ -307,7 +307,7 @@ contract AgoraStableSwapPairCore is
             : _getAmount1Out(_amountIn, _token0OverToken1Price, _storage.token1PurchaseFee);
 
         // Checks: amountOut must not be smaller than the amountOutMin
-        if (_amountOut < _amountOutMin) revert AmountOutInsufficient();
+        if (_amountOut < _amountOutMin) revert InsufficientOutputAmount();
 
         // Interactions: transfer tokens from msg.sender to this contract
         IERC20(_path[0]).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
@@ -347,7 +347,7 @@ contract AgoraStableSwapPairCore is
             ? _getAmount0In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee)
             : _getAmount1In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee);
         // Checks: amountInMax must be larger or equal to than the amountIn
-        if (_amountIn > _amountInMax) revert AmountInMaxExceeded();
+        if (_amountIn > _amountInMax) revert ExcessiveInputAmount();
 
         // Interactions: transfer tokens from msg.sender to this contract
         IERC20(_path[1]).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
@@ -583,13 +583,17 @@ contract AgoraStableSwapPairCore is
     /// @notice Emitted when the deadline is passed
     error DeadlinePassed();
 
-    /// @notice Emitted when the amountOut is less than the minimum amountOut
-    error AmountOutInsufficient();
-
-    /// @notice Emitted when the amountInMax is less than the amountIn
     /// @notice Emitted when the reserve is insufficient
     error InsufficientLiquidity();
 
     /// @notice Emitted when the token purchase fee is invalid
     error InvalidTokenPurchaseFee(address token);
+
+    error ExcessiveInputAmount();
+
+    error InsufficientOutputAmount();
+
+    error InsufficientInputAmount();
+
+    error PairIsPaused();
 }

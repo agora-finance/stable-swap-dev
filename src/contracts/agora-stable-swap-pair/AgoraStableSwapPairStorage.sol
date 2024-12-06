@@ -20,23 +20,30 @@ contract AgoraStableSwapPairStorage {
     // Structs
     //==============================================================================
     struct ConfigStorage {
-        uint256 minToken0PurchaseFee; // 18 decimals
-        uint256 maxToken0PurchaseFee; // 18 decimals
-        uint256 minToken1PurchaseFee; // 18 decimals
-        uint256 maxToken1PurchaseFee; // 18 decimals
+        uint256 minToken0PurchaseFee; // given as bps with 1 decimal (i.e. 1000 = 100 bps = 1%)
+        uint256 maxToken0PurchaseFee; // given as bps with 1 decimal (i.e. 1000 = 100 bps = 1%)
+        uint256 minToken1PurchaseFee; // given as bps with 1 decimal (i.e. 1000 = 100 bps = 1%)
+        uint256 maxToken1PurchaseFee; // given as bps with 1 decimal (i.e. 1000 = 100 bps = 1%)
         address tokenReceiverAddress;
+        uint256 minBasePrice;
+        uint256 maxBasePrice;
+        uint256 minAnnualizedInterestRate;
+        uint256 maxAnnualizedInterestRate;
     }
 
     struct SwapStorage {
         bool isPaused;
         address token0;
+        uint8 token0Decimals;
         address token1;
+        uint8 token1Decimals;
         uint112 reserve0;
         uint112 reserve1;
-        uint16 token0PurchaseFee; // given as bps with 1 decimal (i.e. 1000 = 100 bps = 1%)
-        uint16 token1PurchaseFee; // given as bps with 1 decimal (i.e. 1000 = 100 bps = 1%)
-        uint40 priceLastUpdated;
-        uint128 token0OverToken1Price; // given as token1's price in token0 with 18 decimals
+        uint64 token0PurchaseFee; // 18 decimals precision, max value 1
+        uint64 token1PurchaseFee; // 18 decimals precision, max value 1
+        uint32 priceLastUpdated; // Only good for a few more years
+        uint64 perSecondInterestRate; // 18 decimals of precision
+        uint256 basePrice; // 18 decimals of precision
     }
 
     /// @notice The AgoraStableSwapStorage struct is used to store the state of the AgoraStableSwapPair contract
@@ -70,22 +77,11 @@ contract AgoraStableSwapPairStorage {
 
     /// @notice The ```_getPointerToAgoraStableSwapStorage``` function returns a pointer to the AgoraStableSwapStorage struct
     /// @return $ A pointer to the AgoraStableSwapStorage struct
-    function _getPointerToAgoraStableSwapStorage() internal pure returns (AgoraStableSwapStorage storage $) {
+    function getPointerToAgoraStableSwapStorage() public pure returns (AgoraStableSwapStorage storage $) {
         /// @solidity memory-safe-assembly
         assembly {
             $.slot := AGORA_STABLE_SWAP_STORAGE_SLOT
         }
-    }
-
-    //! TODO: Remove this function
-    /// @notice The ```_getCopyOfAgoraStableSwapStorage``` function returns a copy of the AgoraStableSwapStorage struct
-    /// @return agoraStableSwapStorage A copy of the AgoraStableSwapStorage struct
-    function _getCopyOfAgoraStableSwapStorage()
-        internal
-        pure
-        returns (AgoraStableSwapStorage memory agoraStableSwapStorage)
-    {
-        agoraStableSwapStorage = _getPointerToAgoraStableSwapStorage();
     }
 
     /// @notice The ```AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT``` is the storage slot for the re-entrancy lock

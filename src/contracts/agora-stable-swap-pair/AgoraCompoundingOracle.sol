@@ -70,10 +70,9 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
     // Initialization Functions
     //==============================================================================
 
-    //! TODO: should this be a public function with _ prefix?
     /// @notice The ```_initializeAgoraCompoundingOracle``` function initializes the AgoraCompoundingOracleStorage struct
     /// @dev initialization is called on the same transaction as the deployment of the pair
-    function _initializeAgoraCompoundingOracle() public {
+    function _initializeAgoraCompoundingOracle() internal {
         _getPointerToAgoraCompoundingOracleStorage().perSecondInterestRate = uint112(0);
         _getPointerToAgoraCompoundingOracleStorage().lastUpdated = (block.timestamp).toUint32();
         _getPointerToAgoraCompoundingOracleStorage().basePrice = uint112(1e18);
@@ -160,13 +159,13 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         emit ConfigureOraclePrice(_basePrice, _annualizedInterestRate);
     }
 
-    /// @notice The ```getCompoundingPrice``` function calculates the current price of the pair using a simple compounding model
+    /// @notice The ```calculatePrice``` function calculates the current price of the pair using a simple compounding model
     /// @param _lastUpdated The timestamp of the last price update
     /// @param _currentTimestamp The current timestamp
     /// @param _interestRate The per second interest rate
     /// @param _basePrice The base price of the pair
     /// @return _currentPrice The current price of the pair
-    function getCompoundingPrice(
+    function calculatePrice(
         uint256 _lastUpdated,
         uint256 _currentTimestamp,
         uint256 _interestRate,
@@ -186,7 +185,7 @@ contract AgoraCompoundingOracle is AgoraStableSwapAccessControl {
         uint256 _currentTimestamp = block.timestamp;
         uint256 _basePrice = _storage.basePrice;
         uint256 _interestRate = _storage.perSecondInterestRate;
-        _currentPrice = getCompoundingPrice({
+        _currentPrice = calculatePrice({
             _lastUpdated: _lastUpdated,
             _currentTimestamp: _currentTimestamp,
             _interestRate: _interestRate,
