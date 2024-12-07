@@ -12,66 +12,56 @@ pragma solidity ^0.8.28;
 // ====================== AgoraStableSwapPair =========================
 // ====================================================================
 
-import { AgoraStableSwapPairCore } from "./AgoraStableSwapPairCore.sol";
+import { AgoraStableSwapPairConfiguration } from "./AgoraStableSwapPairConfiguration.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-/// @notice The ```Version``` struct is used to represent the version of the AgoraStableSwapPair
-/// @param major The major version number
-/// @param minor The minor version number
-/// @param patch The patch version number
-struct Version {
-    uint256 major;
-    uint256 minor;
-    uint256 patch;
-}
 
 /// @title AgoraStableSwapPair
 /// @notice The AgoraStableSwapPair is a contract that manages the core logic for the AgoraStableSwapPair
 /// @author Agora
-contract AgoraStableSwapPair is AgoraStableSwapPairCore {
+contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     using SafeERC20 for IERC20;
 
     /// @notice The ```token0``` function returns the address of the token0 in the pair
     /// @return _token0 The address of the token0 in the pair
     function token0() public view returns (address) {
-        return _getPointerToAgoraStableSwapStorage().swapStorage.token0;
+        return _getPointerToStorage().swapStorage.token0;
     }
 
     /// @notice The ```token1``` function returns the address of the token1 in the pair
     /// @return _token1 The address of the token1 in the pair
     function token1() public view returns (address) {
-        return _getPointerToAgoraStableSwapStorage().swapStorage.token1;
+        return _getPointerToStorage().swapStorage.token1;
     }
 
     /// @notice The ```token0PurchaseFee``` function returns the purchase fee for the token0 in the pair
     /// @return _token0PurchaseFee The purchase fee for the token0 in the pair
     function token0PurchaseFee() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().swapStorage.token0PurchaseFee;
+        return _getPointerToStorage().swapStorage.token0PurchaseFee;
     }
 
     /// @notice The ```token1PurchaseFee``` function returns the purchase fee for the token1 in the pair
     /// @return _token1PurchaseFee The purchase fee for the token1 in the pair
     function token1PurchaseFee() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().swapStorage.token1PurchaseFee;
+        return _getPointerToStorage().swapStorage.token1PurchaseFee;
     }
 
     /// @notice The ```isPaused``` function returns whether the pair is paused
     /// @return _isPaused Whether the pair is paused
     function isPaused() public view returns (bool) {
-        return _getPointerToAgoraStableSwapStorage().swapStorage.isPaused;
+        return _getPointerToStorage().swapStorage.isPaused;
     }
 
     /// @notice The ```reserve0``` function returns the reserve of the token0 in the pair
     /// @return _reserve0 The reserve of the token0 in the pair
     function reserve0() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().swapStorage.reserve0;
+        return _getPointerToStorage().swapStorage.reserve0;
     }
 
     /// @notice The ```reserve1``` function returns the reserve of the token1 in the pair
     /// @return _reserve1 The reserve of the token1 in the pair
     function reserve1() public view returns (uint256) {
-        return _getPointerToAgoraStableSwapStorage().swapStorage.reserve1;
+        return _getPointerToStorage().swapStorage.reserve1;
     }
 
     /// @notice The ```getAmountsOut``` function calculates the amount of tokenOut returned from a given amount of tokenIn
@@ -84,7 +74,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         uint256 _amountIn,
         address[] memory _path
     ) public view returns (uint256[] memory _amounts) {
-        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
+        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
@@ -120,7 +110,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         uint256 _amountOut,
         address[] memory _path
     ) public view returns (uint256[] memory _amounts) {
-        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
+        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
@@ -147,9 +137,19 @@ contract AgoraStableSwapPair is AgoraStableSwapPairCore {
         }
     }
 
+    /// @notice The ```Version``` struct is used to represent the version of the AgoraStableSwapPair
+    /// @param major The major version number
+    /// @param minor The minor version number
+    /// @param patch The patch version number
+    struct Version {
+        uint256 major;
+        uint256 minor;
+        uint256 patch;
+    }
+
     /// @notice The ```version``` function returns the version of the AgoraStableSwapPair
     /// @return _version The version of the AgoraStableSwapPair
-    function version() external view returns (Version memory _version) {
+    function version() external pure returns (Version memory _version) {
         _version = Version({ major: 1, minor: 0, patch: 0 });
     }
 }

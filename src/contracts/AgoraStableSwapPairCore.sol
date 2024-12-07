@@ -16,8 +16,6 @@ import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol
 
 import { IUniswapV2Callee } from "./interfaces/IUniswapV2Callee.sol";
 
-import { AgoraCompoundingOracle } from "./AgoraCompoundingOracle.sol";
-import { AgoraStableSwapPairStorage } from "./AgoraStableSwapPairStorage.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -44,32 +42,85 @@ struct InitializeParams {
 /// @title AgoraStableSwapPairCore
 /// @notice The AgoraStableSwapPairCore is a contract that manages the core logic for the AgoraStableSwapPair
 /// @author Agora
-contract AgoraStableSwapPairCore is
-    AgoraStableSwapPairStorage,
-    AgoraStableSwapAccessControl,
-    AgoraCompoundingOracle,
-    Initializable
-{
+contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
-    // struct AgoraStableSwapStorage {
-    //     address token0;
-    //     address token1;
-    //     uint256 token0PurchaseFee; // 18 decimals
-    //     uint256 minToken0PurchaseFee; // 18 decimals
-    //     uint256 maxToken0PurchaseFee; // 18 decimals
-    //     uint256 token1PurchaseFee; // 18 decimals
-    //     uint256 minToken1PurchaseFee; // 18 decimals
-    //     uint256 maxToken1PurchaseFee; // 18 decimals
-    //     address oracleAddress;
-    //     uint256 token0OverToken1Price; // given as token1's price in token0
-    //     uint256 reserve0;
-    //     uint256 reserve1;
-    //     uint256 lastBlock;
-    //     bool isPaused;
-    //     address tokenReceiverAddress;
-    // }
+    //==============================================================================
+    // Storage Structs
+    //==============================================================================
+    struct ConfigStorage {
+        uint256 minToken0PurchaseFee; // 18 decimals precision, max value 1
+        uint256 maxToken0PurchaseFee; // 18 decimals precision, max value 1
+        uint256 minToken1PurchaseFee; // 18 decimals precision, max value 1
+        uint256 maxToken1PurchaseFee; // 18 decimals precision, max value 1
+        address tokenReceiverAddress;
+        uint256 minBasePrice;
+        uint256 maxBasePrice;
+        uint256 minAnnualizedInterestRate;
+        uint256 maxAnnualizedInterestRate;
+    }
+
+    struct SwapStorage {
+        bool isPaused;
+        address token0;
+        uint8 token0Decimals;
+        address token1;
+        uint8 token1Decimals;
+        uint112 reserve0;
+        uint112 reserve1;
+        uint64 token0PurchaseFee; // 18 decimals precision, max value 1
+        uint64 token1PurchaseFee; // 18 decimals precision, max value 1
+        uint40 priceLastUpdated;
+        uint64 perSecondInterestRate; // 18 decimals of precision
+        uint256 basePrice; // 18 decimals of precision
+    }
+
+    /// @notice The AgoraStableSwapStorage struct is used to store the state of the AgoraStableSwapPair contract
+    /// @param isPaused The boolean value indicating whether the pair is paused
+    /// @param token0 The address of token0
+    /// @param token1 The address of token1
+    /// @param token0PurchaseFee The purchase fee for token0
+    /// @param minToken0PurchaseFee The minimum purchase fee for token0
+    /// @param maxToken0PurchaseFee The maximum purchase fee for token0
+    /// @param token1PurchaseFee The purchase fee for token1
+    /// @param minToken1PurchaseFee The minimum purchase fee for token1
+    /// @param maxToken1PurchaseFee The maximum purchase fee for token1
+    /// @param oracleAddress The address of the oracle
+    /// @param reserve0 The reserve of token0
+    /// @param reserve1 The reserve of token1
+    /// @param lastBlock The last block number
+    /// @param tokenReceiverAddress The address of the token receiver
+    struct AgoraStableSwapStorage {
+        SwapStorage swapStorage;
+        ConfigStorage configStorage;
+    }
+
+    //==============================================================================
+    // Erc 7201: UnstructuredNamespace Storage Functions
+    //==============================================================================
+
+    /// @notice The ```AGORA_STABLE_SWAP_STORAGE_SLOT``` is the storage slot for the AgoraStableSwapStorage struct
+    /// @dev keccak256(abi.encode(uint256(keccak256("AgoraStableSwapPairStorage")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 public constant AGORA_STABLE_SWAP_STORAGE_SLOT =
+        0x7bec511bd7f6687e2731c8fe683a8e6468bf371b3ebd503eee87dd5465b4a500;
+
+    /// @notice The ```_getPointerToAgoraStableSwapStorage``` function returns a pointer to the AgoraStableSwapStorage struct
+    /// @return $ A pointer to the AgoraStableSwapStorage struct
+    function _getPointerToStorage() internal pure returns (AgoraStableSwapStorage storage $) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            $.slot := AGORA_STABLE_SWAP_STORAGE_SLOT
+        }
+    }
+
+    /// @notice The ```AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT``` is the storage slot for the re-entrancy lock
+    /// @dev keccak256(abi.encode(uint256(keccak256("AgoraStableSwapStorage.TransientReentrancyLock")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 public constant AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT =
+        0x1c912e2d5b9a8ca13ccf418e7dc8bfe55d8292938ebaef5b3166abbe45f04b00;
+
+    uint256 public constant PRICE_PRECISION = 1e18;
+    uint256 public constant FEE_PRECISION = 1e18;
 
     //==============================================================================
     // Constructor & Initalization Functions
@@ -85,21 +136,24 @@ contract AgoraStableSwapPairCore is
     function initialize(InitializeParams memory _params) public initializer {
         // Initialize the access control and oracle
         _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
-        _initializeAgoraCompoundingOracle();
+
+        // Set oracle last updated & basePrice
+        _getPointerToStorage().swapStorage.priceLastUpdated = uint40(block.timestamp);
+        _getPointerToStorage().swapStorage.basePrice = 1e18;
 
         // Set the token0 and token1
-        _getPointerToAgoraStableSwapStorage().swapStorage.token0 = _params.token0;
-        _getPointerToAgoraStableSwapStorage().swapStorage.token1 = _params.token1;
+        _getPointerToStorage().swapStorage.token0 = _params.token0;
+        _getPointerToStorage().swapStorage.token1 = _params.token1;
 
         // Set the token0to1Fee and token1to0Fee
-        _getPointerToAgoraStableSwapStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint16();
+        _getPointerToStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint16();
         emit SetTokenPurchaseFee({ token: _params.token0, tokenPurchaseFee: _params.token0PurchaseFee });
 
-        _getPointerToAgoraStableSwapStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint16();
+        _getPointerToStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint16();
         emit SetTokenPurchaseFee({ token: _params.token1, tokenPurchaseFee: _params.token1PurchaseFee });
 
         // Set the tokenReceiverAddress
-        _getPointerToAgoraStableSwapStorage().config.tokenReceiverAddress = _params.initialTokenReceiver;
+        _getPointerToStorage().configStorage.tokenReceiverAddress = _params.initialTokenReceiver;
         emit SetTokenReceiver({ tokenReceiver: _params.initialTokenReceiver });
     }
     //==============================================================================
@@ -148,7 +202,9 @@ contract AgoraStableSwapPairCore is
         uint256 _token0OverToken1Price,
         uint256 _token1PurchaseFee
     ) public pure returns (uint256 _amountIn) {
-        _amountIn = (_amountOut * _token0OverToken1Price) / ((PRECISION - _token1PurchaseFee) * PRECISION);
+        _amountIn =
+            (_amountOut * _token0OverToken1Price * FEE_PRECISION) /
+            ((FEE_PRECISION - _token1PurchaseFee) * PRICE_PRECISION);
     }
 
     /// @notice The ```getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
@@ -161,7 +217,9 @@ contract AgoraStableSwapPairCore is
         uint256 _token0OverToken1Price,
         uint256 _token0PurchaseFee
     ) public pure returns (uint256 _amountIn) {
-        _amountIn = _amountOut / ((PRECISION - _token0PurchaseFee) * _token0OverToken1Price);
+        _amountIn =
+            (_amountOut * FEE_PRECISION * PRICE_PRECISION) /
+            ((FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price);
     }
 
     /// @notice The ```getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
@@ -174,7 +232,9 @@ contract AgoraStableSwapPairCore is
         uint256 _token0OverToken1Price,
         uint256 _token0PurchaseFee
     ) public pure returns (uint256 _amountOut) {
-        _amountOut = (_amountIn * (PRECISION - _token0PurchaseFee) * _token0OverToken1Price) / PRECISION;
+        _amountOut =
+            (_amountIn * (FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price) /
+            (PRICE_PRECISION * FEE_PRECISION);
     }
 
     /// @notice The ```getAmount1Out``` function calculates the amount of output token1Out returned from a given amount of input token0In
@@ -187,21 +247,14 @@ contract AgoraStableSwapPairCore is
         uint256 _token0OverToken1Price,
         uint256 _token1PurchaseFee
     ) public pure returns (uint256 _amountOut) {
-        _amountOut = (_amountIn * (PRECISION - _token1PurchaseFee)) / _token0OverToken1Price;
+        _amountOut =
+            (_amountIn * PRICE_PRECISION * (FEE_PRECISION - _token1PurchaseFee)) /
+            (_token0OverToken1Price * FEE_PRECISION);
     }
 
     //==============================================================================
     // External Stateful Functions
     //==============================================================================
-
-    event Swap(
-        address indexed sender,
-        uint256 amount0In,
-        uint256 amount1In,
-        uint256 amount0Out,
-        uint256 amount1Out,
-        address indexed to
-    );
 
     /// @notice The ```swap``` function swaps tokens in the pair
     /// @dev This function has a modifier that prevents reentrancy
@@ -218,7 +271,7 @@ contract AgoraStableSwapPairCore is
         }
 
         // Cache information about the pair for gas savings
-        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
+        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         //Checks: ensure pair not paused
@@ -294,7 +347,7 @@ contract AgoraStableSwapPairCore is
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
-        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
+        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
@@ -336,7 +389,7 @@ contract AgoraStableSwapPairCore is
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
-        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
+        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
@@ -363,7 +416,7 @@ contract AgoraStableSwapPairCore is
     /// @notice The ```sync``` function syncs the reserves of the pair
     /// @dev This function is used to sync the reserves of the pair
     function sync() external {
-        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
+        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         _sync(IERC20(_storage.token0).balanceOf(address(this)), IERC20(_storage.token1).balanceOf(address(this)));
     }
 
@@ -371,49 +424,56 @@ contract AgoraStableSwapPairCore is
     /// @param _token0balance The balance of token0
     /// @param _token1Balance The balance of token1
     function _sync(uint256 _token0balance, uint256 _token1Balance) internal {
-        _getPointerToAgoraStableSwapStorage().swapStorage.reserve0 = _token0balance.toUint112();
-        _getPointerToAgoraStableSwapStorage().swapStorage.reserve1 = _token1Balance.toUint112();
+        _getPointerToStorage().swapStorage.reserve0 = _token0balance.toUint112();
+        _getPointerToStorage().swapStorage.reserve1 = _token1Balance.toUint112();
+    }
+
+    /// @notice The ```calculatePrice``` function calculates the current price of the pair using a simple compounding model
+    /// @param _lastUpdated The timestamp of the last price update
+    /// @param _currentTimestamp The current timestamp
+    /// @param _interestRate The per second interest rate
+    /// @param _basePrice The base price of the pair
+    /// @return _currentPrice The current price of the pair
+    function calculatePrice(
+        uint256 _lastUpdated,
+        uint256 _currentTimestamp,
+        uint256 _interestRate,
+        uint256 _basePrice
+    ) public pure returns (uint256 _currentPrice) {
+        // Calculate the time elapsed since the last price update
+        uint256 timeElapsed = _currentTimestamp - _lastUpdated;
+        // Calculate the compounded price
+        _currentPrice = (_basePrice + _interestRate * timeElapsed);
+    }
+
+    /// @notice The ```getPrice``` function returns the current price of the pair
+    /// @return _currentPrice The current price of the pair
+    function getPrice() public view virtual returns (uint256 _currentPrice) {
+        SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
+        uint256 _lastUpdated = _swapStorage.priceLastUpdated;
+        uint256 _currentTimestamp = block.timestamp;
+        uint256 _basePrice = _swapStorage.basePrice;
+        uint256 _interestRate = _swapStorage.perSecondInterestRate;
+        _currentPrice = calculatePrice({
+            _lastUpdated: _lastUpdated,
+            _currentTimestamp: _currentTimestamp,
+            _interestRate: _interestRate,
+            _basePrice: _basePrice
+        });
     }
 
     //==============================================================================
-    // Privileged Configuration Functions
+    // Events
     //==============================================================================
 
     /// @notice The ```SetTokenReceiver``` event is emitted when the token receiver is set
     /// @param tokenReceiver The address of the token receiver
     event SetTokenReceiver(address indexed tokenReceiver);
 
-    /// @notice The ```setTokenReceiver``` function sets the token receiver
-    /// @param _tokenReceiver The address of the token receiver
-    function setTokenReceiver(address _tokenReceiver) public {
-        // Checks: Only the admin can set the token receiver
-        _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
-
-        // Effects: Set the token receiver
-        _getPointerToAgoraStableSwapStorage().config.tokenReceiverAddress = _tokenReceiver;
-
-        // emit event
-        emit SetTokenReceiver({ tokenReceiver: _tokenReceiver });
-    }
-
     /// @notice The ```SetApprovedSwapper``` event is emitted when the approved swapper is set
     /// @param approvedSwapper The address of the approved swapper
     /// @param isApproved The boolean value indicating whether the swapper is approved
     event SetApprovedSwapper(address indexed approvedSwapper, bool isApproved);
-
-    /// @notice The ```setApprovedSwapper``` function sets the approved swapper
-    /// @param _approvedSwapper The address of the approved swapper
-    /// @param _setApproved The boolean value indicating whether the swapper is approved
-    function setApprovedSwapper(address _approvedSwapper, bool _setApproved) public {
-        // Checks: Only the whitelister can set the approved swapper
-        _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
-
-        // Effects: Set the isApproved state
-        _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwapper, _addRole: _setApproved });
-
-        // emit event
-        emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _setApproved });
-    }
 
     /// @notice The ```SetFeeBounds``` event is emitted when the fee bounds are set
     /// @param minToken0PurchaseFee The minimum purchase fee for token0
@@ -427,97 +487,15 @@ contract AgoraStableSwapPairCore is
         uint256 maxToken1PurchaseFee
     );
 
-    /// @notice The ```setFeeBounds``` function sets the fee bounds
-    /// @param minToken0PurchaseFee The minimum purchase fee for token0
-    /// @param maxToken0PurchaseFee The maximum purchase fee for token0
-    /// @param minToken1PurchaseFee The minimum purchase fee for token1
-    /// @param maxToken1PurchaseFee The maximum purchase fee for token1
-    function setFeeBounds(
-        uint256 minToken0PurchaseFee,
-        uint256 maxToken0PurchaseFee,
-        uint256 minToken1PurchaseFee,
-        uint256 maxToken1PurchaseFee
-    ) external {
-        // Checks: Only the admin can set the fee bounds
-        _requireSenderIsRole({ _role: ADMIN_ROLE });
-
-        // Effects: Set the fee bounds
-        _getPointerToAgoraStableSwapStorage().config.minToken0PurchaseFee = minToken0PurchaseFee;
-        _getPointerToAgoraStableSwapStorage().config.maxToken0PurchaseFee = maxToken0PurchaseFee;
-        _getPointerToAgoraStableSwapStorage().config.minToken1PurchaseFee = minToken1PurchaseFee;
-        _getPointerToAgoraStableSwapStorage().config.maxToken1PurchaseFee = maxToken1PurchaseFee;
-
-        emit SetFeeBounds({
-            minToken0PurchaseFee: minToken0PurchaseFee,
-            maxToken0PurchaseFee: maxToken0PurchaseFee,
-            minToken1PurchaseFee: minToken1PurchaseFee,
-            maxToken1PurchaseFee: maxToken1PurchaseFee
-        });
-    }
-
     /// @notice The ```SetTokenPurchaseFee``` event is emitted when the token purchase fee is set
     /// @param token The address of the token
     /// @param tokenPurchaseFee The purchase fee for the token
     event SetTokenPurchaseFee(address indexed token, uint256 tokenPurchaseFee);
 
-    /// @notice The ```setTokenPurchaseFee``` function sets the token purchase fee
-    /// @param _token The address of the token
-    /// @param _tokenPurchaseFee The purchase fee for the token
-    function setTokenPurchaseFee(address _token, uint256 _tokenPurchaseFee) public {
-        // Checks: Only the fee setter can set the fee
-        _requireIsRole({ _role: FEE_SETTER_ROLE, _address: msg.sender });
-
-        // Effects: Set the token1to0Fee
-        if (_token == _getPointerToAgoraStableSwapStorage().swapStorage.token0) {
-            if (
-                _tokenPurchaseFee < _getPointerToAgoraStableSwapStorage().config.minToken0PurchaseFee ||
-                _tokenPurchaseFee > _getPointerToAgoraStableSwapStorage().config.maxToken0PurchaseFee
-            ) revert InvalidTokenPurchaseFee({ token: _token });
-            _getPointerToAgoraStableSwapStorage().swapStorage.token0PurchaseFee = _tokenPurchaseFee.toUint16();
-        } else if (_token == _getPointerToAgoraStableSwapStorage().swapStorage.token1) {
-            if (
-                _tokenPurchaseFee < _getPointerToAgoraStableSwapStorage().config.minToken1PurchaseFee ||
-                _tokenPurchaseFee > _getPointerToAgoraStableSwapStorage().config.maxToken1PurchaseFee
-            ) revert InvalidTokenPurchaseFee({ token: _token });
-            _getPointerToAgoraStableSwapStorage().swapStorage.token1PurchaseFee = _tokenPurchaseFee.toUint16();
-        } else {
-            revert InvalidTokenAddress({ token: _token });
-        }
-
-        // emit event
-        emit SetTokenPurchaseFee({ token: _token, tokenPurchaseFee: _tokenPurchaseFee });
-    }
-
     /// @notice The ```RemoveTokens``` event is emitted when tokens are removed
     /// @param tokenAddress The address of the token
     /// @param amount The amount of tokens to remove
     event RemoveTokens(address indexed tokenAddress, uint256 amount);
-
-    /// @notice The ```removeTokens``` function removes tokens from the pair
-    /// @param _tokenAddress The address of the token
-    /// @param _amount The amount of tokens to remove
-    function removeTokens(address _tokenAddress, uint256 _amount) external {
-        // Checks: Only the token remover can remove tokens
-        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
-
-        SwapStorage memory _swapStorage = _getPointerToAgoraStableSwapStorage().swapStorage;
-        ConfigStorage memory _configStorage = _getPointerToAgoraStableSwapStorage().config;
-
-        if (_tokenAddress != _swapStorage.token0 && _tokenAddress != _swapStorage.token1) {
-            revert InvalidTokenAddress({ token: _tokenAddress });
-        }
-
-        IERC20(_tokenAddress).safeTransfer({ to: _configStorage.tokenReceiverAddress, value: _amount });
-
-        // Update reserves
-        _sync({
-            _token0balance: IERC20(_swapStorage.token0).balanceOf(address(this)),
-            _token1Balance: IERC20(_swapStorage.token1).balanceOf(address(this))
-        });
-
-        // emit event
-        emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
-    }
 
     /// @notice The ```AddTokens``` event is emitted when tokens are added
     /// @param tokenAddress The address of the token
@@ -525,43 +503,35 @@ contract AgoraStableSwapPairCore is
     /// @param amount The amount of tokens to add
     event AddTokens(address indexed tokenAddress, address from, uint256 amount);
 
-    /// @notice The ```addTokens``` function adds tokens to the pair
-    /// @param _tokenAddress The address of the token
-    /// @param _amount The amount of tokens to add
-    function addTokens(address _tokenAddress, uint256 _amount) external {
-        SwapStorage memory _storage = _getPointerToAgoraStableSwapStorage().swapStorage;
-
-        if (_tokenAddress != _storage.token0 && _tokenAddress != _storage.token1) {
-            revert InvalidTokenAddress({ token: _tokenAddress });
-        }
-        IERC20(_tokenAddress).safeTransferFrom({ from: msg.sender, to: address(this), value: _amount });
-
-        // Update reserves
-        _sync({
-            _token0balance: IERC20(_storage.token0).balanceOf(address(this)),
-            _token1Balance: IERC20(_storage.token1).balanceOf(address(this))
-        });
-
-        // emit event
-        emit AddTokens({ tokenAddress: _tokenAddress, from: msg.sender, amount: _amount });
-    }
-
     /// @notice The ```SetPaused``` event is emitted when the pair is paused
     /// @param isPaused The boolean value indicating whether the pair is paused
     event SetPaused(bool isPaused);
 
-    /// @notice The ```setPaused``` function sets the paused state of the pair
-    /// @param _setPaused The boolean value indicating whether the pair is paused
-    function setPaused(bool _setPaused) public {
-        // Checks: Only the pauser can pause the pair
-        _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
+    /// @notice Emitted when the price bounds are set
+    /// @param minBasePrice The minimum allowed initial base price
+    /// @param maxBasePrice The maximum allowed initial base price
+    /// @param minAnnualizedInterestRate The minimum allowed annualized interest rate
+    /// @param maxAnnualizedInterestRate The maximum allowed annualized interest rate
+    event SetOraclePriceBounds(
+        uint256 minBasePrice,
+        uint256 maxBasePrice,
+        uint256 minAnnualizedInterestRate,
+        uint256 maxAnnualizedInterestRate
+    );
 
-        // Effects: Set the isPaused state
-        _getPointerToAgoraStableSwapStorage().swapStorage.isPaused = _setPaused;
+    /// @notice Emitted when the price is configured
+    /// @param basePrice The base price of the pair
+    /// @param annualizedInterestRate The annualized interest rate
+    event ConfigureOraclePrice(uint256 basePrice, uint256 annualizedInterestRate);
 
-        // emit event
-        emit SetPaused({ isPaused: _setPaused });
-    }
+    event Swap(
+        address indexed sender,
+        uint256 amount0In,
+        uint256 amount1In,
+        uint256 amount0Out,
+        uint256 amount1Out,
+        address indexed to
+    );
 
     // ============================================================================================
     // Errors
@@ -596,4 +566,16 @@ contract AgoraStableSwapPairCore is
     error InsufficientInputAmount();
 
     error PairIsPaused();
+
+    /// @notice Emitted when the price is out of bounds
+    error BasePriceOutOfBounds();
+
+    /// @notice Emitted when the annualized interest rate is out of bounds
+    error AnnualizedInterestRateOutOfBounds();
+
+    /// @notice Emitted when the min base price is greater than the max base price
+    error MinBasePriceGreaterThanMaxBasePrice();
+
+    /// @notice Emitted when the min annualized interest rate is greater than the max annualized interest rate
+    error MinAnnualizedInterestRateGreaterThanMax();
 }
