@@ -338,6 +338,8 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
+        address _tokenIn = _path[0];
+        address _tokenOut = _path[1];
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
@@ -346,7 +348,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
         // Calculations: determine amounts based on path
 
-        uint256 _amountOut = _path[1] == _storage.token0
+        uint256 _amountOut = _tokenOut == _storage.token0
             ? getAmount0Out(_amountIn, _token0OverToken1Price, _storage.token0PurchaseFee)
             : getAmount1Out(_amountIn, _token0OverToken1Price, _storage.token1PurchaseFee);
 
@@ -354,10 +356,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         if (_amountOut < _amountOutMin) revert InsufficientOutputAmount();
 
         // Interactions: transfer tokens from msg.sender to this contract
-        IERC20(_path[0]).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
+        IERC20(_tokenIn).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
 
         // Effects: swap tokens
-        if (_path[1] == _storage.token0) {
+        if (_tokenOut == _storage.token0) {
             swap({ _amount0Out: _amountOut, _amount1Out: 0, _to: _to, _data: new bytes(0) });
         } else {
             swap({ _amount0Out: 0, _amount1Out: _amountOut, _to: _to, _data: new bytes(0) });
@@ -380,6 +382,8 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
+        address _tokenIn = _path[0];
+        address _tokenOut = _path[1];
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
@@ -387,17 +391,17 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
         // Calculations: determine amounts based on path
-        uint256 _amountIn = _path[0] == _storage.token0
-            ? getAmount0In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee)
-            : getAmount1In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee);
+        uint256 _amountIn = _tokenIn == _storage.token0
+            ? getAmount0In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee)
+            : getAmount1In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee);
         // Checks: amountInMax must be larger or equal to than the amountIn
         if (_amountIn > _amountInMax) revert ExcessiveInputAmount();
 
         // Interactions: transfer tokens from msg.sender to this contract
-        IERC20(_path[1]).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
+        IERC20(_tokenIn).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
 
         // Effects: swap tokens
-        if (_path[1] == _storage.token0) {
+        if (_tokenOut == _storage.token0) {
             swap({ _amount0Out: _amountOut, _amount1Out: 0, _to: _to, _data: new bytes(0) });
         } else {
             swap({ _amount0Out: 0, _amount1Out: _amountOut, _to: _to, _data: new bytes(0) });
