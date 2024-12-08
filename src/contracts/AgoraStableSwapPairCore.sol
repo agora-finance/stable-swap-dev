@@ -32,7 +32,9 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @param initialAdminAddress The address of the initial admin
 struct InitializeParams {
     address token0;
+    uint8 token0Decimals;
     address token1;
+    uint8 token1Decimals;
     uint256 token0PurchaseFee;
     uint256 token1PurchaseFee;
     address initialFeeSetter;
@@ -60,14 +62,14 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 maxBasePrice;
         uint256 minAnnualizedInterestRate;
         uint256 maxAnnualizedInterestRate;
+        uint8 token0Decimals;
+        uint8 token1Decimals;
     }
 
     struct SwapStorage {
         bool isPaused;
         address token0;
-        uint8 token0Decimals;
         address token1;
-        uint8 token1Decimals;
         uint112 reserve0;
         uint112 reserve1;
         uint64 token0PurchaseFee; // 18 decimals precision, max value 1
@@ -143,9 +145,11 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         _getPointerToStorage().swapStorage.basePrice = 1e18;
         emit ConfigureOraclePrice({ basePrice: 1e18, annualizedInterestRate: 0 });
 
-        // Set the token0 and token1
+        // Set the token0 and token1 and decimals
         _getPointerToStorage().swapStorage.token0 = _params.token0;
+        _getPointerToStorage().configStorage.token0Decimals = _params.token0Decimals;
         _getPointerToStorage().swapStorage.token1 = _params.token1;
+        _getPointerToStorage().configStorage.token1Decimals = _params.token1Decimals;
 
         // Set the token0to1Fee and token1to0Fee
         _getPointerToStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint64();
