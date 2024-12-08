@@ -58,10 +58,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 minToken1PurchaseFee; // 18 decimals precision, max value 1
         uint256 maxToken1PurchaseFee; // 18 decimals precision, max value 1
         address tokenReceiverAddress;
-        uint256 minBasePrice;
-        uint256 maxBasePrice;
-        uint256 minAnnualizedInterestRate;
-        uint256 maxAnnualizedInterestRate;
+        uint256 minBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
+        uint256 maxBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
+        uint256 minAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
+        uint256 maxAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
         uint8 token0Decimals;
         uint8 token1Decimals;
     }
@@ -75,8 +75,8 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint64 token0PurchaseFee; // 18 decimals precision, max value 1
         uint64 token1PurchaseFee; // 18 decimals precision, max value 1
         uint40 priceLastUpdated;
-        uint64 perSecondInterestRate; // 18 decimals of precision
-        uint256 basePrice; // 18 decimals of precision
+        uint64 perSecondInterestRate; // 18 decimals of precision, given as whole number i.e. 1e16 = 1%
+        uint256 basePrice; // 18 decimals of precision, limited by token0 and token1 decimals
     }
 
     /// @notice The AgoraStableSwapStorage struct is used to store the state of the AgoraStableSwapPair contract
@@ -442,7 +442,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         // Calculate the time elapsed since the last price update
         uint256 timeElapsed = _currentTimestamp - _lastUpdated;
         // Calculate the compounded price
-        _currentPrice = (_basePrice + _interestRate * timeElapsed);
+        _currentPrice = ((_basePrice * (PRICE_PRECISION + _interestRate * timeElapsed)) / PRICE_PRECISION);
     }
 
     /// @notice The ```getPrice``` function returns the current price of the pair
