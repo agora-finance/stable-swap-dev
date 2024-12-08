@@ -115,11 +115,6 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         }
     }
 
-    /// @notice The ```AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT``` is the storage slot for the re-entrancy lock
-    /// @dev keccak256(abi.encode(uint256(keccak256("AgoraStableSwapStorage.TransientReentrancyLock")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 public constant AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT =
-        0x1c912e2d5b9a8ca13ccf418e7dc8bfe55d8292938ebaef5b3166abbe45f04b00;
-
     uint256 public constant PRICE_PRECISION = 1e18;
     uint256 public constant FEE_PRECISION = 1e18;
 
