@@ -161,8 +161,8 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
 
         _getPointerToStorage().configStorage.minBasePrice = _minBasePrice;
         _getPointerToStorage().configStorage.maxBasePrice = _maxBasePrice;
-        _getPointerToStorage().configStorage.minAnnualizedInterestRate = _minAnnualizedInterestRate.toUint112();
-        _getPointerToStorage().configStorage.maxAnnualizedInterestRate = _maxAnnualizedInterestRate.toUint112();
+        _getPointerToStorage().configStorage.minAnnualizedInterestRate = _minAnnualizedInterestRate;
+        _getPointerToStorage().configStorage.maxAnnualizedInterestRate = _maxAnnualizedInterestRate;
 
         emit SetOraclePriceBounds({
             minBasePrice: _minBasePrice,
@@ -189,7 +189,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         ) revert AnnualizedInterestRateOutOfBounds();
 
         // Set the time of the last price update
-        _getPointerToStorage().swapStorage.priceLastUpdated = (block.timestamp).toUint32();
+        _getPointerToStorage().swapStorage.priceLastUpdated = (block.timestamp).toUint40();
         // Convert yearly APR to per second APR
         _getPointerToStorage().swapStorage.perSecondInterestRate = (_annualizedInterestRate / 365 days).toUint64();
         // Set the price of the asset

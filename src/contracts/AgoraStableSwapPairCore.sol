@@ -32,7 +32,9 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @param initialAdminAddress The address of the initial admin
 struct InitializeParams {
     address token0;
+    uint8 token0Decimals;
     address token1;
+    uint8 token1Decimals;
     uint256 token0PurchaseFee;
     uint256 token1PurchaseFee;
     address initialFeeSetter;
@@ -56,25 +58,25 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 minToken1PurchaseFee; // 18 decimals precision, max value 1
         uint256 maxToken1PurchaseFee; // 18 decimals precision, max value 1
         address tokenReceiverAddress;
-        uint256 minBasePrice;
-        uint256 maxBasePrice;
-        uint256 minAnnualizedInterestRate;
-        uint256 maxAnnualizedInterestRate;
+        uint256 minBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
+        uint256 maxBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
+        uint256 minAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
+        uint256 maxAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
+        uint8 token0Decimals;
+        uint8 token1Decimals;
     }
 
     struct SwapStorage {
         bool isPaused;
         address token0;
-        uint8 token0Decimals;
         address token1;
-        uint8 token1Decimals;
         uint112 reserve0;
         uint112 reserve1;
         uint64 token0PurchaseFee; // 18 decimals precision, max value 1
         uint64 token1PurchaseFee; // 18 decimals precision, max value 1
         uint40 priceLastUpdated;
-        uint64 perSecondInterestRate; // 18 decimals of precision
-        uint256 basePrice; // 18 decimals of precision
+        uint64 perSecondInterestRate; // 18 decimals of precision, given as whole number i.e. 1e16 = 1%
+        uint256 basePrice; // 18 decimals of precision, limited by token0 and token1 decimals
     }
 
     /// @notice The AgoraStableSwapStorage struct is used to store the state of the AgoraStableSwapPair contract
@@ -134,17 +136,19 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
 
         // Set oracle last updated & basePrice
-        _getPointerToStorage().swapStorage.priceLastUpdated = uint40(block.timestamp);
+        _getPointerToStorage().swapStorage.priceLastUpdated = block.timestamp.toUint40();
         _getPointerToStorage().swapStorage.basePrice = 1e18;
         emit ConfigureOraclePrice({ basePrice: 1e18, annualizedInterestRate: 0 });
 
-        // Set the token0 and token1
+        // Set the token0 and token1 and decimals
         _getPointerToStorage().swapStorage.token0 = _params.token0;
+        _getPointerToStorage().configStorage.token0Decimals = _params.token0Decimals;
         _getPointerToStorage().swapStorage.token1 = _params.token1;
+        _getPointerToStorage().configStorage.token1Decimals = _params.token1Decimals;
 
         // Set the token0to1Fee and token1to0Fee
-        _getPointerToStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint16();
-        _getPointerToStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint16();
+        _getPointerToStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint64();
+        _getPointerToStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint64();
         emit SetTokenPurchaseFees({
             token0PurchaseFee: _params.token0PurchaseFee,
             token1PurchaseFee: _params.token1PurchaseFee
@@ -333,6 +337,8 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
+        address _tokenIn = _path[0];
+        address _tokenOut = _path[1];
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
@@ -341,7 +347,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
         // Calculations: determine amounts based on path
 
-        uint256 _amountOut = _path[1] == _storage.token0
+        uint256 _amountOut = _tokenOut == _storage.token0
             ? getAmount0Out(_amountIn, _token0OverToken1Price, _storage.token0PurchaseFee)
             : getAmount1Out(_amountIn, _token0OverToken1Price, _storage.token1PurchaseFee);
 
@@ -349,10 +355,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         if (_amountOut < _amountOutMin) revert InsufficientOutputAmount();
 
         // Interactions: transfer tokens from msg.sender to this contract
-        IERC20(_path[0]).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
+        IERC20(_tokenIn).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
 
         // Effects: swap tokens
-        if (_path[1] == _storage.token0) {
+        if (_tokenOut == _storage.token0) {
             swap({ _amount0Out: _amountOut, _amount1Out: 0, _to: _to, _data: new bytes(0) });
         } else {
             swap({ _amount0Out: 0, _amount1Out: _amountOut, _to: _to, _data: new bytes(0) });
@@ -375,6 +381,8 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
+        address _tokenIn = _path[0];
+        address _tokenOut = _path[1];
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
@@ -382,17 +390,17 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
         // Calculations: determine amounts based on path
-        uint256 _amountIn = _path[0] == _storage.token0
-            ? getAmount0In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee)
-            : getAmount1In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee);
+        uint256 _amountIn = _tokenIn == _storage.token0
+            ? getAmount0In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee)
+            : getAmount1In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee);
         // Checks: amountInMax must be larger or equal to than the amountIn
         if (_amountIn > _amountInMax) revert ExcessiveInputAmount();
 
         // Interactions: transfer tokens from msg.sender to this contract
-        IERC20(_path[1]).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
+        IERC20(_tokenIn).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
 
         // Effects: swap tokens
-        if (_path[1] == _storage.token0) {
+        if (_tokenOut == _storage.token0) {
             swap({ _amount0Out: _amountOut, _amount1Out: 0, _to: _to, _data: new bytes(0) });
         } else {
             swap({ _amount0Out: 0, _amount1Out: _amountOut, _to: _to, _data: new bytes(0) });
@@ -430,7 +438,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         // Calculate the time elapsed since the last price update
         uint256 timeElapsed = _currentTimestamp - _lastUpdated;
         // Calculate the compounded price
-        _currentPrice = (_basePrice + _interestRate * timeElapsed);
+        _currentPrice = ((_basePrice * (PRICE_PRECISION + _interestRate * timeElapsed)) / PRICE_PRECISION);
     }
 
     /// @notice The ```getPrice``` function returns the current price of the pair
