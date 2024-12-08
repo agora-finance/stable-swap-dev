@@ -64,6 +64,91 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().swapStorage.reserve1;
     }
 
+    /// @notice The ```token0Decimals``` function returns the decimals of the token0
+    /// @return _token0Decimals The decimals of the token0
+    function token0Decimals() public view returns (uint8) {
+        return _getPointerToStorage().swapStorage.token0Decimals;
+    }
+
+    /// @notice The ```token1Decimals``` function returns the decimals of the token1
+    /// @return _token1Decimals The decimals of the token1
+    function token1Decimals() public view returns (uint8) {
+        return _getPointerToStorage().swapStorage.token1Decimals;
+    }
+
+    /// @notice The ```priceLastUpdated``` function returns the timestamp when the price was updated
+    /// @return _priceLastUpdated The timestamp when the price was updated
+    function priceLastUpdated() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.priceLastUpdated;
+    }
+
+    /// @notice The ```perSecondInterestRate``` function returns the per second interest rate
+    /// @return _perSecondInterestRate The per second interest rate
+    function perSecondInterestRate() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.perSecondInterestRate;
+    }
+
+    /// @notice The ```basePrice``` function returns the base price
+    /// @return _basePrice The base price
+    function basePrice() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.basePrice;
+    }
+
+    /// @notice The ```minToken0PurchaseFee``` function returns the minimum purchase fee for token0
+    /// @return _minToken0PurchaseFee The minimum purchase fee for token0
+    function minToken0PurchaseFee() public view returns (uint256) {
+        return _getPointerToStorage().configStorage.minToken0PurchaseFee;
+    }
+
+    /// @notice The ```maxToken0PurchaseFee``` function returns the maximum purchase fee for token0
+    /// @return _maxToken0PurchaseFee The maximum purchase fee for token0
+    function maxToken0PurchaseFee() public view returns (uint256) {
+        return _getPointerToStorage().configStorage.maxToken0PurchaseFee;
+    }
+
+    /// @notice The ```minToken1PurchaseFee``` function returns the minimum purchase fee for token1
+    /// @return _minToken1PurchaseFee The minimum purchase fee for token1
+    function minToken1PurchaseFee() public view returns (uint256) {
+        return _getPointerToStorage().configStorage.minToken1PurchaseFee;
+    }
+
+    /// @notice The ```maxToken1PurchaseFee``` function returns the maximum purchase fee for token1
+    /// @return _maxToken1PurchaseFee The maximum purchase fee for token1
+    function maxToken1PurchaseFee() public view returns (uint256) {
+        return _getPointerToStorage().configStorage.maxToken1PurchaseFee;
+    }
+
+    /// @notice The ```tokenReceiverAddress``` function returns the address of the token receiver
+    /// @return _tokenReceiverAddress The address of the token receiver
+    function tokenReceiverAddress() public view returns (address) {
+        return _getPointerToStorage().configStorage.tokenReceiverAddress;
+    }
+
+    /// @notice The ```minBasePrice``` function returns the minimum base price
+    /// @return _minBasePrice The minimum base price
+    function minBasePrice() public view returns (uint256) {
+        return _getPointerToStorage().configStorage.minBasePrice;
+    }
+
+    /// @notice The ```maxBasePrice``` function returns the maximum base price
+    /// @return _maxBasePrice The maximum base price
+    function maxBasePrice() public view returns (uint256) {
+        return _getPointerToStorage().configStorage.maxBasePrice;
+    }
+
+    /// @notice The ```minAnnualizedInterestRate``` function returns the minimum annualized interest rate
+    /// @return _minAnnualizedInterestRate The minimum annualized interest rate
+    function minAnnualizedInterestRate() public view returns (uint256) {
+        return _getPointerToStorage().configStorage.minAnnualizedInterestRate;
+    }
+
+    /// @notice The ```maxAnnualizedInterestRate``` function returns the maximum annualized interest rate
+    /// @return _maxAnnualizedInterestRate The maximum annualized interest rate
+    function maxAnnualizedInterestRate() public view returns (uint256) {
+        return _getPointerToStorage().configStorage.maxAnnualizedInterestRate;
+    }
+
+
     /// @notice The ```getAmountsOut``` function calculates the amount of tokenOut returned from a given amount of tokenIn
     /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountIn The amount of input tokenIn
