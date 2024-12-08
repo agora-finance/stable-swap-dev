@@ -11,6 +11,7 @@ pragma solidity ^0.8.28;
 // ====================================================================
 // ==================== AgoraStableSwapPairCore =======================
 // ====================================================================
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
 
@@ -42,7 +43,7 @@ struct InitializeParams {
 /// @title AgoraStableSwapPairCore
 /// @notice The AgoraStableSwapPairCore is a contract that manages the core logic for the AgoraStableSwapPair
 /// @author Agora
-contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable {
+contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -158,24 +159,6 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
         _getPointerToStorage().configStorage.tokenReceiverAddress = _params.initialTokenReceiver;
         emit SetTokenReceiver({ tokenReceiver: _params.initialTokenReceiver });
     }
-    //==============================================================================
-    // Modifiers
-    //==============================================================================
-
-    modifier nonreentrant() {
-        assembly {
-            if tload(AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT) {
-                revert(0, 0)
-            }
-            tstore(AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT, 1)
-        }
-        _;
-        // Unlocks the guard, making the pattern composable.
-        // After the function exits, it can be called again, even in the same transaction.
-        assembly {
-            tstore(AGORA_STABLE_SWAP_TRANSIENT_LOCK_SLOT, 0)
-        }
-    }
 
     //==============================================================================
     // Internal Helper Functions
@@ -207,6 +190,9 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
         _amountIn =
             (_amountOut * _token0OverToken1Price * FEE_PRECISION) /
             ((FEE_PRECISION - _token1PurchaseFee) * PRICE_PRECISION);
+        if (_amountIn * (FEE_PRECISION - _token1PurchaseFee) * PRICE_PRECISION < _amountOut * _token0OverToken1Price) {
+            _amountIn += 1;
+        }
     }
 
     /// @notice The ```getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
@@ -222,6 +208,9 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
         _amountIn =
             (_amountOut * FEE_PRECISION * PRICE_PRECISION) /
             ((FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price);
+        if (_amountIn * (FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price < _amountOut * PRICE_PRECISION) {
+            _amountIn += 1;
+        }
     }
 
     /// @notice The ```getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
@@ -264,7 +253,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
     /// @param _amount1Out The amount of token1 to send out
     /// @param _to The address to send the tokens to
     /// @param _data The data to send to the callback
-    function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes memory _data) public nonreentrant {
+    function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes memory _data) public nonReentrant {
         _requireSenderIsRole({ _role: APPROVED_SWAPPER });
 
         // Checks: input sanitation, force one amountOut to be 0, and the other to be > 0
@@ -345,7 +334,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
         address[] memory _path,
         address _to,
         uint256 _deadline
-    ) external nonreentrant {
+    ) external {
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
@@ -387,7 +376,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
         address[] memory _path,
         address _to,
         uint256 _deadline
-    ) external nonreentrant {
+    ) external {
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 

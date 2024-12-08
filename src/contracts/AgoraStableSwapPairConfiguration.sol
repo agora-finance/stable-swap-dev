@@ -89,17 +89,19 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         // Checks: Only the fee setter can set the fee
         _requireIsRole({ _role: FEE_SETTER_ROLE, _address: msg.sender });
 
-        // Effects: Set the token1to0Fee
+        // Checks: Ensure the params are valid and within the bounds
         if (
             _token0PurchaseFee < _getPointerToStorage().configStorage.minToken0PurchaseFee ||
             _token0PurchaseFee > _getPointerToStorage().configStorage.maxToken0PurchaseFee
         ) revert InvalidToken0PurchaseFee();
-        _getPointerToStorage().swapStorage.token0PurchaseFee = _token0PurchaseFee.toUint16();
         if (
             _token1PurchaseFee < _getPointerToStorage().configStorage.minToken1PurchaseFee ||
             _token1PurchaseFee > _getPointerToStorage().configStorage.maxToken1PurchaseFee
         ) revert InvalidToken1PurchaseFee();
-        _getPointerToStorage().swapStorage.token1PurchaseFee = _token1PurchaseFee.toUint16();
+
+        // Effects: write to storage
+        _getPointerToStorage().swapStorage.token0PurchaseFee = _token0PurchaseFee.toUint64();
+        _getPointerToStorage().swapStorage.token1PurchaseFee = _token1PurchaseFee.toUint64();
 
         // emit event
         emit SetTokenPurchaseFees({ token0PurchaseFee: _token0PurchaseFee, token1PurchaseFee: _token1PurchaseFee });
