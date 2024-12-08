@@ -36,7 +36,7 @@ interface IAgoraStableSwapPair {
     event RoleRevoked(string indexed role, address indexed address_);
     event SetApprovedSwapper(address indexed approvedSwapper, bool isApproved);
     event SetPaused(bool isPaused);
-    event SetTokenPurchaseFee(address indexed token, uint256 tokenPurchaseFee);
+    event setTokenPurchaseFees(address indexed token, uint256 tokenPurchaseFee);
     event SetTokenReceiver(address indexed tokenReceiver);
 
     function ADMIN_ROLE() external view returns (string memory);
@@ -84,7 +84,7 @@ interface IAgoraStableSwapPair {
     function reserve1() external view returns (uint256);
     function setApprovedSwapper(address _approvedSwapper, bool _isApproved) external;
     function setPaused(bool _isPaused) external;
-    function setTokenPurchaseFee(address _token, uint256 _tokenPurchaseFee) external;
+    function setTokenPurchaseFees(address _token, uint256 _tokenPurchaseFee) external;
     function setTokenReceiver(address _tokenReceiver) external;
     function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes memory _data) external;
     function swapExactTokensForTokens(

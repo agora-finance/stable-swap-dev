@@ -140,6 +140,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
         // Set oracle last updated & basePrice
         _getPointerToStorage().swapStorage.priceLastUpdated = uint40(block.timestamp);
         _getPointerToStorage().swapStorage.basePrice = 1e18;
+        emit ConfigureOraclePrice({ basePrice: 1e18, annualizedInterestRate: 0 });
 
         // Set the token0 and token1
         _getPointerToStorage().swapStorage.token0 = _params.token0;
@@ -147,10 +148,11 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
 
         // Set the token0to1Fee and token1to0Fee
         _getPointerToStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint16();
-        emit SetTokenPurchaseFee({ token: _params.token0, tokenPurchaseFee: _params.token0PurchaseFee });
-
         _getPointerToStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint16();
-        emit SetTokenPurchaseFee({ token: _params.token1, tokenPurchaseFee: _params.token1PurchaseFee });
+        emit SetTokenPurchaseFees({
+            token0PurchaseFee: _params.token0PurchaseFee,
+            token1PurchaseFee: _params.token1PurchaseFee
+        });
 
         // Set the tokenReceiverAddress
         _getPointerToStorage().configStorage.tokenReceiverAddress = _params.initialTokenReceiver;
@@ -487,10 +489,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
         uint256 maxToken1PurchaseFee
     );
 
-    /// @notice The ```SetTokenPurchaseFee``` event is emitted when the token purchase fee is set
-    /// @param token The address of the token
-    /// @param tokenPurchaseFee The purchase fee for the token
-    event SetTokenPurchaseFee(address indexed token, uint256 tokenPurchaseFee);
+    event SetTokenPurchaseFees(uint256 token0PurchaseFee, uint256 token1PurchaseFee);
 
     /// @notice The ```RemoveTokens``` event is emitted when tokens are removed
     /// @param tokenAddress The address of the token
@@ -557,7 +556,9 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable 
     error InsufficientLiquidity();
 
     /// @notice Emitted when the token purchase fee is invalid
-    error InvalidTokenPurchaseFee(address token);
+    error InvalidToken0PurchaseFee();
+
+    error InvalidToken1PurchaseFee();
 
     error ExcessiveInputAmount();
 
