@@ -139,7 +139,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
 
         // Set oracle last updated & basePrice
-        _getPointerToStorage().swapStorage.priceLastUpdated = uint40(block.timestamp);
+        _getPointerToStorage().swapStorage.priceLastUpdated = block.timestamp.toUint40();
         _getPointerToStorage().swapStorage.basePrice = 1e18;
         emit ConfigureOraclePrice({ basePrice: 1e18, annualizedInterestRate: 0 });
 
@@ -148,8 +148,8 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         _getPointerToStorage().swapStorage.token1 = _params.token1;
 
         // Set the token0to1Fee and token1to0Fee
-        _getPointerToStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint16();
-        _getPointerToStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint16();
+        _getPointerToStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint64();
+        _getPointerToStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint64();
         emit SetTokenPurchaseFees({
             token0PurchaseFee: _params.token0PurchaseFee,
             token1PurchaseFee: _params.token1PurchaseFee
