@@ -404,6 +404,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     function sync() external {
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         _sync(IERC20(_storage.token0).balanceOf(address(this)), IERC20(_storage.token1).balanceOf(address(this)));
+        emit Sync({ reserve0: _storage.reserve0, reserve1: _storage.reserve1 });
     }
 
     /// @notice The ```_sync``` function syncs the reserves of the pair
@@ -507,6 +508,13 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @param annualizedInterestRate The annualized interest rate
     event ConfigureOraclePrice(uint256 basePrice, uint256 annualizedInterestRate);
 
+    /// @notice Emitted when a swap is executed
+    /// @param sender The address of the sender
+    /// @param amount0In The amount of token0 in
+    /// @param amount1In The amount of token1 in
+    /// @param amount0Out The amount of token0 out
+    /// @param amount1Out The amount of token1 out
+    /// @param to The address of the recipient
     event Swap(
         address indexed sender,
         uint256 amount0In,
@@ -514,6 +522,14 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 amount0Out,
         uint256 amount1Out,
         address indexed to
+    );
+
+    /// @notice Emitted when the reserves are synced
+    /// @param reserve0 The reserve of token0
+    /// @param reserve1 The reserve of token1
+    event Sync(
+        uint256 reserve0,
+        uint256 reserve1
     );
 
     // ============================================================================================
