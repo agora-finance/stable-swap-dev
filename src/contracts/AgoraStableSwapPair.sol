@@ -64,18 +64,6 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().swapStorage.reserve1;
     }
 
-    /// @notice The ```token0Decimals``` function returns the decimals of the token0
-    /// @return _token0Decimals The decimals of the token0
-    function token0Decimals() public view returns (uint8) {
-        return _getPointerToStorage().swapStorage.token0Decimals;
-    }
-
-    /// @notice The ```token1Decimals``` function returns the decimals of the token1
-    /// @return _token1Decimals The decimals of the token1
-    function token1Decimals() public view returns (uint8) {
-        return _getPointerToStorage().swapStorage.token1Decimals;
-    }
-
     /// @notice The ```priceLastUpdated``` function returns the timestamp when the price was updated
     /// @return _priceLastUpdated The timestamp when the price was updated
     function priceLastUpdated() public view returns (uint256) {
