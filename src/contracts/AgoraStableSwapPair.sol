@@ -136,7 +136,6 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().configStorage.maxAnnualizedInterestRate;
     }
 
-
     /// @notice The ```getAmountsOut``` function calculates the amount of tokenOut returned from a given amount of tokenIn
     /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountIn The amount of input tokenIn
@@ -152,6 +151,9 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
         // Checks: path length is 2 && path must contain token0 and token1 only
         requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+
+        // Checks: amountIn is greater than 0
+        if (_amountIn == 0) revert InsufficientInputAmount();
 
         // instantiate return variables
         _amounts = new uint256[](2);
@@ -188,6 +190,9 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
         // Checks: path length is 2 && path must contain token0 and token1 only
         requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+
+        // Checks: amountOut is greater than 0
+        if (_amountOut == 0) revert InsufficientOutputAmount();
 
         // instantiate return variables
         _amounts = new uint256[](2);
