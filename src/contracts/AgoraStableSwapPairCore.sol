@@ -335,7 +335,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 _deadline
     ) external returns (uint256[] memory _amounts) {
         // Checks: block.timestamp must be less than deadline
-        if (_deadline < block.timestamp) revert DeadlinePassed();
+        if (_deadline < block.timestamp) revert Expired();
 
         address _tokenIn = _path[0];
         address _tokenOut = _path[1];
@@ -383,7 +383,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 _deadline
     ) external returns (uint256[] memory _amounts) {
         // Checks: block.timestamp must be less than deadline
-        if (_deadline < block.timestamp) revert DeadlinePassed();
+        if (_deadline < block.timestamp) revert Expired();
 
         address _tokenIn = _path[0];
         address _tokenOut = _path[1];
@@ -566,7 +566,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     error InvalidSwapAmounts();
 
     /// @notice Emitted when the deadline is passed
-    error DeadlinePassed();
+    error Expired();
 
     /// @notice Emitted when the reserve is insufficient
     error InsufficientLiquidity();
