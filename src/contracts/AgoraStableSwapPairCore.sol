@@ -169,9 +169,9 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @param _token1 The address of the second token in the pair
     function requireValidPath(address[] memory _path, address _token0, address _token1) public pure {
         // Checks: path length is 2
-        if (_path.length != 2) revert InvalidPath();
+        if (_path.length != 2) revert InvalidPathLength();
 
-        if (!(_path[0] == _token0 && _path[1] == _token1) || !(_path[0] == _token1 && _path[1] == _token0)) {
+        if (!(_path[0] == _token0 && _path[1] == _token1) && !(_path[0] == _token1 && _path[1] == _token0)) {
             revert InvalidPath();
         }
     }
@@ -535,10 +535,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @notice Emitted when the reserves are synced
     /// @param reserve0 The reserve of token0
     /// @param reserve1 The reserve of token1
-    event Sync(
-        uint256 reserve0,
-        uint256 reserve1
-    );
+    event Sync(uint256 reserve0, uint256 reserve1);
 
     // ============================================================================================
     // Errors
@@ -550,6 +547,9 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
     /// @notice Emitted when an invalid path is passed to a function
     error InvalidPath();
+
+    /// @notice Emitted when an invalid path length is passed to a function
+    error InvalidPathLength();
 
     /// @notice Emitted when an invalid swap amount is returned from a function
     error InvalidAmount();
