@@ -333,7 +333,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         address[] memory _path,
         address _to,
         uint256 _deadline
-    ) external {
+    ) external returns (uint256[] memory _amounts) {
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
@@ -363,6 +363,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         } else {
             swap({ _amount0Out: 0, _amount1Out: _amountOut, _to: _to, _data: new bytes(0) });
         }
+
+        _amounts = new uint256[](2);
+        _amounts[0] = _amountIn;
+        _amounts[1] = _amountOut;
     }
 
     /// @notice The ```swapTokensForExactTokens``` function swaps an amount of output tokenOut for an exact amount of input tokenIn
@@ -377,7 +381,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         address[] memory _path,
         address _to,
         uint256 _deadline
-    ) external {
+    ) external returns (uint256[] memory _amounts) {
         // Checks: block.timestamp must be less than deadline
         if (_deadline < block.timestamp) revert DeadlinePassed();
 
@@ -405,6 +409,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         } else {
             swap({ _amount0Out: 0, _amount1Out: _amountOut, _to: _to, _data: new bytes(0) });
         }
+
+        _amounts = new uint256[](2);
+        _amounts[0] = _amountIn;
+        _amounts[1] = _amountOut;
     }
 
     /// @notice The ```sync``` function syncs the reserves of the pair
