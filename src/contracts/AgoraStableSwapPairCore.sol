@@ -189,9 +189,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         _amountIn =
             (_amountOut * _token0OverToken1Price * FEE_PRECISION) /
             ((FEE_PRECISION - _token1PurchaseFee) * PRICE_PRECISION);
-        if (_amountIn * (FEE_PRECISION - _token1PurchaseFee) * PRICE_PRECISION < _amountOut * _token0OverToken1Price) {
-            _amountIn += 1;
-        }
+        if (
+            _amountIn * (FEE_PRECISION - _token1PurchaseFee) * PRICE_PRECISION <
+            _amountOut * _token0OverToken1Price * FEE_PRECISION
+        ) _amountIn += 1;
     }
 
     /// @notice The ```getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
@@ -207,9 +208,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         _amountIn =
             (_amountOut * FEE_PRECISION * PRICE_PRECISION) /
             ((FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price);
-        if (_amountIn * (FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price < _amountOut * PRICE_PRECISION) {
-            _amountIn += 1;
-        }
+        if (
+            _amountIn * (FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price <
+            _amountOut * PRICE_PRECISION * FEE_PRECISION
+        ) _amountIn += 1;
     }
 
     /// @notice The ```getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
