@@ -219,7 +219,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @return _normalizedPrice The normalized price with 18 decimals of precision
     function getPriceNormalized() external view returns (uint256 _normalizedPrice) {
         ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
-        return (getPrice() * 10 ** _configStorage.token0Decimals) / 10 ** _configStorage.token1Decimals;
+        return (getPrice() * 10 ** _configStorage.token1Decimals) / 10 ** _configStorage.token0Decimals;
     }
 
     /// @notice The ```Version``` struct is used to represent the version of the AgoraStableSwapPair
