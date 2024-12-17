@@ -302,11 +302,11 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         if (_amount0Out > 0) {
             // we are sending token0 out, receiving token1 In
             uint256 _expectedAmount1In = getAmount1In(_amount0Out, _token0OverToken1Price, _storage.token0PurchaseFee);
-            if (_expectedAmount1In < _token1In) revert InsufficientInputAmount();
+            if (_expectedAmount1In > _token1In) revert InsufficientInputAmount();
         } else {
             // we are sending token1 out, receiving token0 in
             uint256 _expectedAmount0In = getAmount0In(_amount1Out, _token0OverToken1Price, _storage.token1PurchaseFee);
-            if (_expectedAmount0In < _token0In) revert InsufficientInputAmount();
+            if (_expectedAmount0In > _token0In) revert InsufficientInputAmount();
         }
 
         // Update reserves
