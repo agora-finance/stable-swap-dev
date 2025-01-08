@@ -45,7 +45,7 @@ interface IAgoraStableSwapPair {
     error SafeERC20FailedOperation(address token);
 
     event AddTokens(address indexed tokenAddress, address from, uint256 amount);
-    event ConfigureOraclePrice(uint256 basePrice, uint256 annualizedInterestRate);
+    event ConfigureOraclePrice(uint256 basePrice, int256 annualizedInterestRate);
     event Initialized(uint64 version);
     event RemoveTokens(address indexed tokenAddress, uint256 amount);
     event RoleAssigned(string indexed role, address indexed address_);
@@ -60,8 +60,8 @@ interface IAgoraStableSwapPair {
     event SetOraclePriceBounds(
         uint256 minBasePrice,
         uint256 maxBasePrice,
-        uint256 minAnnualizedInterestRate,
-        uint256 maxAnnualizedInterestRate
+        int256 minAnnualizedInterestRate,
+        int256 maxAnnualizedInterestRate
     );
     event SetPaused(bool isPaused);
     event SetTokenPurchaseFees(uint256 token0PurchaseFee, uint256 token1PurchaseFee);
@@ -92,10 +92,10 @@ interface IAgoraStableSwapPair {
     function calculatePrice(
         uint256 _lastUpdated,
         uint256 _currentTimestamp,
-        uint256 _interestRate,
+        int256 _interestRate,
         uint256 _basePrice
     ) external pure returns (uint256 _currentPrice);
-    function configureOraclePrice(uint256 _basePrice, uint256 _annualizedInterestRate) external;
+    function configureOraclePrice(uint256 _basePrice, int256 _annualizedInterestRate) external;
     function getAllRoles() external view returns (string[] memory _roles);
     function getAmount0In(
         uint256 _amountOut,
@@ -157,8 +157,8 @@ interface IAgoraStableSwapPair {
     function setOraclePriceBounds(
         uint256 _minBasePrice,
         uint256 _maxBasePrice,
-        uint256 _minAnnualizedInterestRate,
-        uint256 _maxAnnualizedInterestRate
+        int256 _minAnnualizedInterestRate,
+        int256 _maxAnnualizedInterestRate
     ) external;
     function setPaused(bool _setPaused) external;
     function setTokenPurchaseFees(uint256 _token0PurchaseFee, uint256 _token1PurchaseFee) external;

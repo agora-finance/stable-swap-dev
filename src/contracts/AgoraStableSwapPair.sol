@@ -72,7 +72,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
     /// @notice The ```perSecondInterestRate``` function returns the per second interest rate
     /// @return _perSecondInterestRate The per second interest rate
-    function perSecondInterestRate() public view returns (uint256) {
+    function perSecondInterestRate() public view returns (int256) {
         return _getPointerToStorage().swapStorage.perSecondInterestRate;
     }
 
@@ -126,13 +126,13 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
     /// @notice The ```minAnnualizedInterestRate``` function returns the minimum annualized interest rate
     /// @return _minAnnualizedInterestRate The minimum annualized interest rate
-    function minAnnualizedInterestRate() public view returns (uint256) {
+    function minAnnualizedInterestRate() public view returns (int256) {
         return _getPointerToStorage().configStorage.minAnnualizedInterestRate;
     }
 
     /// @notice The ```maxAnnualizedInterestRate``` function returns the maximum annualized interest rate
     /// @return _maxAnnualizedInterestRate The maximum annualized interest rate
-    function maxAnnualizedInterestRate() public view returns (uint256) {
+    function maxAnnualizedInterestRate() public view returns (int256) {
         return _getPointerToStorage().configStorage.maxAnnualizedInterestRate;
     }
 

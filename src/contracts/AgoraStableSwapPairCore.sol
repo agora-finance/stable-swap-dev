@@ -60,8 +60,8 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         address tokenReceiverAddress;
         uint256 minBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
         uint256 maxBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
-        uint256 minAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
-        uint256 maxAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
+        int256 minAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
+        int256 maxAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
         uint8 token0Decimals;
         uint8 token1Decimals;
     }
@@ -75,7 +75,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint64 token0PurchaseFee; // 18 decimals precision, max value 1
         uint64 token1PurchaseFee; // 18 decimals precision, max value 1
         uint40 priceLastUpdated;
-        uint64 perSecondInterestRate; // 18 decimals of precision, given as whole number i.e. 1e16 = 1%
+        int72 perSecondInterestRate; // 18 decimals of precision, given as whole number i.e. 1e16 = 1%
         uint256 basePrice; // 18 decimals of precision, limited by token0 and token1 decimals
     }
 
@@ -436,19 +436,21 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @notice The ```calculatePrice``` function calculates the current price of the pair using a simple compounding model
     /// @param _lastUpdated The timestamp of the last price update
     /// @param _currentTimestamp The current timestamp
-    /// @param _interestRate The per second interest rate
+    /// @param _perSecondInterestRate The per second interest rate
     /// @param _basePrice The base price of the pair
     /// @return _currentPrice The current price of the pair
     function calculatePrice(
         uint256 _lastUpdated,
         uint256 _currentTimestamp,
-        uint256 _interestRate,
+        int256 _perSecondInterestRate,
         uint256 _basePrice
     ) public pure returns (uint256 _currentPrice) {
         // Calculate the time elapsed since the last price update
         uint256 timeElapsed = _currentTimestamp - _lastUpdated;
         // Calculate the compounded price
-        _currentPrice = ((_basePrice * (PRICE_PRECISION + _interestRate * timeElapsed)) / PRICE_PRECISION);
+        _currentPrice = _perSecondInterestRate >= 0
+            ? ((_basePrice * (PRICE_PRECISION + uint256(_perSecondInterestRate) * timeElapsed)) / PRICE_PRECISION)
+            : ((_basePrice * (PRICE_PRECISION - (uint256(-_perSecondInterestRate) * timeElapsed))) / PRICE_PRECISION);
     }
 
     /// @notice The ```getPrice``` function returns the current price of the pair
@@ -458,11 +460,11 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 _lastUpdated = _swapStorage.priceLastUpdated;
         uint256 _currentTimestamp = block.timestamp;
         uint256 _basePrice = _swapStorage.basePrice;
-        uint256 _interestRate = _swapStorage.perSecondInterestRate;
+        int256 _perSecondInterestRate = _swapStorage.perSecondInterestRate;
         _currentPrice = calculatePrice({
             _lastUpdated: _lastUpdated,
             _currentTimestamp: _currentTimestamp,
-            _interestRate: _interestRate,
+            _perSecondInterestRate: _perSecondInterestRate,
             _basePrice: _basePrice
         });
     }
@@ -517,14 +519,14 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     event SetOraclePriceBounds(
         uint256 minBasePrice,
         uint256 maxBasePrice,
-        uint256 minAnnualizedInterestRate,
-        uint256 maxAnnualizedInterestRate
+        int256 minAnnualizedInterestRate,
+        int256 maxAnnualizedInterestRate
     );
 
     /// @notice Emitted when the price is configured
     /// @param basePrice The base price of the pair
     /// @param annualizedInterestRate The annualized interest rate
-    event ConfigureOraclePrice(uint256 basePrice, uint256 annualizedInterestRate);
+    event ConfigureOraclePrice(uint256 basePrice, int256 annualizedInterestRate);
 
     /// @notice Emitted when a swap is executed
     /// @param sender The address of the sender

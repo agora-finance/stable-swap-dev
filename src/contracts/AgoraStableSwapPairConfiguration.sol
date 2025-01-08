@@ -23,7 +23,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @notice The AgoraStableSwapPairConfiguration is a contract that manages the privileged configuration setters for the AgoraStableSwapPair
 /// @author Agora
 contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
-    using SafeCast for uint256;
+    using SafeCast for *;
     using SafeERC20 for IERC20;
 
     //==============================================================================
@@ -151,8 +151,8 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     function setOraclePriceBounds(
         uint256 _minBasePrice,
         uint256 _maxBasePrice,
-        uint256 _minAnnualizedInterestRate,
-        uint256 _maxAnnualizedInterestRate
+        int256 _minAnnualizedInterestRate,
+        int256 _maxAnnualizedInterestRate
     ) external {
         _requireSenderIsRole({ _role: ADMIN_ROLE });
         // Check that the parameters are valid
@@ -176,7 +176,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @dev Only the price setter can configure the price
     /// @param _basePrice The base price of the pair
     /// @param _annualizedInterestRate The annualized interest rate
-    function configureOraclePrice(uint256 _basePrice, uint256 _annualizedInterestRate) external {
+    function configureOraclePrice(uint256 _basePrice, int256 _annualizedInterestRate) external {
         _requireSenderIsRole({ _role: PRICE_SETTER_ROLE });
 
         ConfigStorage memory _storage = _getPointerToStorage().configStorage;
@@ -191,7 +191,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         // Set the time of the last price update
         _getPointerToStorage().swapStorage.priceLastUpdated = (block.timestamp).toUint40();
         // Convert yearly APR to per second APR
-        _getPointerToStorage().swapStorage.perSecondInterestRate = (_annualizedInterestRate / 365 days).toUint64();
+        _getPointerToStorage().swapStorage.perSecondInterestRate = (_annualizedInterestRate / 365 days).toInt72();
         // Set the price of the asset
         _getPointerToStorage().swapStorage.basePrice = (_basePrice).toUint64();
 
