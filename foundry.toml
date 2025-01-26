@@ -6,17 +6,17 @@
 
 [profile.default]
 # The source directory
-src = 'src'
+src = 'src/contracts'
 # the test directoy
-test = '_'
+test = 'src/test'
 # The artifact directory
 out = 'out'
 # The script directory
 script = "src/script"
 # A list of paths to look for libraries in
-libs = ["node_modules"]
+libs = ["node_modules", "lib"]
 # Whether or not to enable `vm.ffi`
-ffi = false
+ffi = true
 # Enables or disables the optimizer
 optimizer = false
 # The number of optimizer runs
@@ -47,10 +47,6 @@ sort_imports = true
 contract_new_lines = true
 override_spacing = false
 
-[etherscan]
-mainnet = { key = "${ETHERSCAN_API_KEY}", url = "${ETHERSCAN_API_URL}" }
-polygon = { key = "${POLYGONSCAN_API_KEY}", url = "${POLYGONSCAN_API_URL}" }
-
 [fuzz]
 # Amount of runs per fuzz test
 runs = 256
@@ -72,10 +68,6 @@ optimizer = true
 optimizer_runs = 1_000_000_000
 via_ir = true
 
-[profile.coverage]
-src = "lib/agora-dollar-evm/src/contracts"
-test = "src/test"
-script = "src/script"
 [profile.coverage.fuzz]
 runs = 64
 
