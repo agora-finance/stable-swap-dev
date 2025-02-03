@@ -136,6 +136,24 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().configStorage.maxAnnualizedInterestRate;
     }
 
+    /// @notice The ```token0FeesAccumulated``` function returns the accumulated fees for token0
+    /// @return _token0FeesAccumulated The accumulated fees for token0
+    function token0FeesAccumulated() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.token0FeesAccumulated;
+    }
+
+    /// @notice The ```token1FeesAccumulated``` function returns the accumulated fees for token1
+    /// @return _token1FeesAccumulated The accumulated fees for token1
+    function token1FeesAccumulated() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.token1FeesAccumulated;
+    }
+
+    /// @notice The ```feeReceiverAddress``` function returns the address of the fee receiver
+    /// @return _feeReceiverAddress The address of the fee receiver
+    function feeReceiverAddress() public view returns (address) {
+        return _getPointerToStorage().configStorage.feeReceiverAddress;
+    }
+
     /// @notice The ```getAmountsOut``` function calculates the amount of tokenOut returned from a given amount of tokenIn
     /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountIn The amount of input tokenIn
@@ -161,14 +179,14 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
         // path[1] represents our tokenOut
         if (_path[1] == _storage.token0) {
-            _amounts[1] = getAmount0Out({
-                _amountIn: _amountIn,
+            (_amounts[1], ) = getAmount0Out({
+                _amount1In: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token0PurchaseFee: _storage.token0PurchaseFee
             });
         } else {
-            _amounts[1] = getAmount1Out({
-                _amountIn: _amountIn,
+            (_amounts[1], ) = getAmount1Out({
+                _amount0In: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token1PurchaseFee: _storage.token1PurchaseFee
             });
@@ -201,14 +219,14 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
         // path[0] represents our tokenIn
         if (_path[0] == _storage.token0) {
-            _amounts[0] = getAmount0In({
-                _amountOut: _amountOut,
+            (_amounts[0], ) = getAmount0In({
+                _amount1Out: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token1PurchaseFee: _storage.token1PurchaseFee
             });
         } else {
-            _amounts[0] = getAmount1In({
-                _amountOut: _amountOut,
+            (_amounts[0], ) = getAmount1In({
+                _amount0Out: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token0PurchaseFee: _storage.token0PurchaseFee
             });

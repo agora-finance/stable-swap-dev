@@ -43,6 +43,17 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         emit SetTokenReceiver({ tokenReceiver: _tokenReceiver });
     }
 
+    function setFeeReceiver(address _feeReceiver) public {
+        // Checks: Only the admin can set the fee receiver
+        _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
+
+        // Effects: Set the fee receiver
+        _getPointerToStorage().configStorage.feeReceiverAddress = _feeReceiver;
+
+        // emit event
+        emit SetFeeReceiver({ feeReceiver: _feeReceiver });
+    }
+
     /// @notice The ```setApprovedSwapper``` function sets the approved swapper
     /// @param _approvedSwapper The address of the approved swapper
     /// @param _setApproved The boolean value indicating whether the swapper is approved
@@ -117,12 +128,67 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
 
+        uint256 _token0Balance = IERC20(_swapStorage.token0).balanceOf(address(this));
+        uint256 _token1Balance = IERC20(_swapStorage.token1).balanceOf(address(this));
+
+        // Check for sufficient tokens available (we check the actual balance here instead of reserves)
+        if (_tokenAddress == _swapStorage.token0 && _amount > _token0Balance - _swapStorage.token0FeesAccumulated) {
+            revert InsufficientTokens();
+        }
+        if (_tokenAddress == _swapStorage.token1 && _amount > _token1Balance - _swapStorage.token1FeesAccumulated) {
+            revert InsufficientTokens();
+        }
+
         IERC20(_tokenAddress).safeTransfer({ to: _configStorage.tokenReceiverAddress, value: _amount });
 
         // Update reserves
         _sync({
-            _token0balance: IERC20(_swapStorage.token0).balanceOf(address(this)),
-            _token1Balance: IERC20(_swapStorage.token1).balanceOf(address(this))
+            _token0Balance: IERC20(_swapStorage.token0).balanceOf(address(this)),
+            _token1Balance: IERC20(_swapStorage.token1).balanceOf(address(this)),
+            _token0FeesAccumulated: _swapStorage.token0FeesAccumulated,
+            _token1FeesAccumulated: _swapStorage.token1FeesAccumulated
+        });
+
+        // emit event
+        emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
+    }
+
+    /// @notice The ```collectFees``` function removes accumulated fees from the pair
+    /// @param _tokenAddress The address of the token
+    /// @param _amount The amount of tokens to remove
+    function collectFees(address _tokenAddress, uint256 _amount) external {
+        // Checks: Only the tokenRemover can remove tokens
+        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
+
+        SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
+        ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
+
+        // Check for sufficient fees accumulated
+        if (_tokenAddress == _swapStorage.token0 && _amount > _swapStorage.token0FeesAccumulated) {
+            revert InsufficientTokens();
+        }
+        if (_tokenAddress == _swapStorage.token1 && _amount > _swapStorage.token1FeesAccumulated) {
+            revert InsufficientTokens();
+        }
+
+        IERC20(_tokenAddress).safeTransfer({ to: _configStorage.feeReceiverAddress, value: _amount });
+
+        // Calculate fees accumulated based on which token was transferred out
+        if (_tokenAddress == _swapStorage.token0) {
+            _swapStorage.token0FeesAccumulated -= _amount.toUint128();
+        } else if (_tokenAddress == _swapStorage.token1) {
+            _swapStorage.token1FeesAccumulated -= _amount.toUint128();
+        } else {
+            // If trying to remove a token not part of the pair, use the removeTokens function
+            revert InvalidTokenAddress();
+        }
+
+        // Update reserves + fees accumulated
+        _sync({
+            _token0Balance: IERC20(_swapStorage.token0).balanceOf(address(this)),
+            _token1Balance: IERC20(_swapStorage.token1).balanceOf(address(this)),
+            _token0FeesAccumulated: _swapStorage.token0FeesAccumulated,
+            _token1FeesAccumulated: _swapStorage.token1FeesAccumulated
         });
 
         // emit event

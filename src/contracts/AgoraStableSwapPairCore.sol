@@ -58,6 +58,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 minToken1PurchaseFee; // 18 decimals precision, max value 1
         uint256 maxToken1PurchaseFee; // 18 decimals precision, max value 1
         address tokenReceiverAddress;
+        address feeReceiverAddress;
         uint256 minBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
         uint256 maxBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
         int256 minAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
@@ -77,6 +78,8 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint40 priceLastUpdated;
         int72 perSecondInterestRate; // 18 decimals of precision, given as whole number i.e. 1e16 = 1%
         uint256 basePrice; // 18 decimals of precision, limited by token0 and token1 decimals
+        uint128 token0FeesAccumulated;
+        uint128 token1FeesAccumulated;
     }
 
     /// @notice The AgoraStableSwapStorage struct is used to store the state of the AgoraStableSwapPair contract
@@ -177,71 +180,94 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     }
 
     /// @notice The ```getAmount0In``` function calculates the amount of input token0In required for a given amount token1Out
-    /// @param _amountOut The amount of output token1
+    /// @param _amount1Out The amount of output token1
     /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
     /// @param _token1PurchaseFee The purchase fee for the token0
-    /// @return _amountIn The amount of input token0
+    /// @return _amount0In The amount of input token0
     function getAmount0In(
-        uint256 _amountOut,
+        uint256 _amount1Out,
         uint256 _token0OverToken1Price,
         uint256 _token1PurchaseFee
-    ) public pure returns (uint256 _amountIn) {
-        _amountIn =
-            (_amountOut * _token0OverToken1Price * FEE_PRECISION) /
-            ((FEE_PRECISION - _token1PurchaseFee) * PRICE_PRECISION);
-        if (
-            _amountIn * (FEE_PRECISION - _token1PurchaseFee) * PRICE_PRECISION <
-            _amountOut * _token0OverToken1Price * FEE_PRECISION
-        ) _amountIn += 1;
+    ) public pure returns (uint256 _amount0In, uint256 _token1PurchaseFeeAmount) {
+        _token1PurchaseFeeAmount = (_amount1Out * _token1PurchaseFee) / FEE_PRECISION;
+
+        // Always round up the fee
+        if (_token1PurchaseFeeAmount * FEE_PRECISION < _amount1Out * _token1PurchaseFee) _token1PurchaseFeeAmount += 1;
+
+        _amount0In = ((_amount1Out + _token1PurchaseFeeAmount) * _token0OverToken1Price) / PRICE_PRECISION;
+
+        // Always round up the amount going into the contract
+        if (_amount0In * PRICE_PRECISION < (_amount1Out + _token1PurchaseFeeAmount) * _token0OverToken1Price) {
+            _amount0In += 1;
+        }
     }
 
     /// @notice The ```getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
-    /// @param _amountOut The amount of output token0
+    /// @param _amount0Out The amount of output token0
     /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
     /// @param _token0PurchaseFee The purchase fee for the token1
-    /// @return _amountIn The amount of input token1
+    /// @return _amount1In The amount of input token1
     function getAmount1In(
-        uint256 _amountOut,
+        uint256 _amount0Out,
         uint256 _token0OverToken1Price,
         uint256 _token0PurchaseFee
-    ) public pure returns (uint256 _amountIn) {
-        _amountIn =
-            (_amountOut * FEE_PRECISION * PRICE_PRECISION) /
-            ((FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price);
-        if (
-            _amountIn * (FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price <
-            _amountOut * PRICE_PRECISION * FEE_PRECISION
-        ) _amountIn += 1;
+    ) public pure returns (uint256 _amount1In, uint256 _token0FeesAmount) {
+        _token0FeesAmount = (_amount0Out * _token0PurchaseFee) / FEE_PRECISION;
+
+        // Always round up the fee
+        if (_token0FeesAmount * FEE_PRECISION < _amount0Out * _token0PurchaseFee) _token0FeesAmount += 1;
+
+        _amount1In = ((_amount0Out + _token0FeesAmount) * PRICE_PRECISION) / _token0OverToken1Price;
+
+        // Always round up the amount going into the contract
+        if (_amount1In * _token0OverToken1Price < (_amount0Out + _token0FeesAmount) * PRICE_PRECISION) _amount1In += 1;
     }
 
     /// @notice The ```getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
-    /// @param _amountIn The amount of input token1
+    /// @param _amount1In The amount of input token1
     /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
     /// @param _token0PurchaseFee The purchase fee for the token0
-    /// @return _amountOut The amount of output token0
+    /// @return _amount0Out The amount of output token0
     function getAmount0Out(
-        uint256 _amountIn,
+        uint256 _amount1In,
         uint256 _token0OverToken1Price,
         uint256 _token0PurchaseFee
-    ) public pure returns (uint256 _amountOut) {
-        _amountOut =
-            (_amountIn * (FEE_PRECISION - _token0PurchaseFee) * _token0OverToken1Price) /
-            (PRICE_PRECISION * FEE_PRECISION);
+    ) public pure returns (uint256 _amount0Out, uint256 _token0PurchaseFeesAmount) {
+        // NOTE:  price and fee must be chosen such that we dont get an overflow during the multiplication here
+        _token0PurchaseFeesAmount =
+            (_amount1In * _token0OverToken1Price * _token0PurchaseFee) /
+            (FEE_PRECISION * PRICE_PRECISION);
+
+        // Always round up the fee
+        if (
+            _token0PurchaseFeesAmount * FEE_PRECISION * PRICE_PRECISION <
+            _amount1In * _token0OverToken1Price * _token0PurchaseFee
+        ) _token0PurchaseFeesAmount += 1;
+
+        _amount0Out = ((_amount1In * _token0OverToken1Price) / PRICE_PRECISION) - _token0PurchaseFeesAmount;
     }
 
     /// @notice The ```getAmount1Out``` function calculates the amount of output token1Out returned from a given amount of input token0In
-    /// @param _amountIn The amount of input token0
+    /// @param _amount0In The amount of input token0
     /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
     /// @param _token1PurchaseFee The purchase fee for the token1
-    /// @return _amountOut The amount of output token1
+    /// @return _amount1Out The amount of output token1
     function getAmount1Out(
-        uint256 _amountIn,
+        uint256 _amount0In,
         uint256 _token0OverToken1Price,
         uint256 _token1PurchaseFee
-    ) public pure returns (uint256 _amountOut) {
-        _amountOut =
-            (_amountIn * PRICE_PRECISION * (FEE_PRECISION - _token1PurchaseFee)) /
-            (_token0OverToken1Price * FEE_PRECISION);
+    ) public pure returns (uint256 _amount1Out, uint256 _token1PurchaseFeesAmount) {
+        _token1PurchaseFeesAmount =
+            (_amount0In * PRICE_PRECISION * _token1PurchaseFee) /
+            (FEE_PRECISION * _token0OverToken1Price);
+
+        // Always round up the fee
+        if (
+            _token1PurchaseFeesAmount * FEE_PRECISION * _token0OverToken1Price <
+            _amount0In * PRICE_PRECISION * _token1PurchaseFee
+        ) _token1PurchaseFeesAmount += 1;
+
+        _amount1Out = ((_amount0In * PRICE_PRECISION) / _token0OverToken1Price) - _token1PurchaseFeesAmount;
     }
 
     //==============================================================================
@@ -298,19 +324,44 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
             ? _finalToken1Balance - (_storage.reserve1 - _amount1Out)
             : 0;
 
-        // Checks:: Final invariant, ensure that we received the correct amount of tokens
-        if (_amount0Out > 0) {
-            // we are sending token0 out, receiving token1 In
-            uint256 _expectedAmount1In = getAmount1In(_amount0Out, _token0OverToken1Price, _storage.token0PurchaseFee);
-            if (_expectedAmount1In > _token1In) revert InsufficientInputAmount();
-        } else {
-            // we are sending token1 out, receiving token0 in
-            uint256 _expectedAmount0In = getAmount0In(_amount1Out, _token0OverToken1Price, _storage.token1PurchaseFee);
-            if (_expectedAmount0In > _token0In) revert InsufficientInputAmount();
+        {
+            // Create local scope
+            uint256 _token0FeesAmount;
+            uint256 _token1FeesAmount;
+
+            // Checks:: Final invariant, ensure that we received the correct amount of tokens
+            if (_amount0Out > 0) {
+                // we are sending token0 out, receiving token1 In
+                uint256 _expectedAmount1In;
+                (_expectedAmount1In, _token0FeesAmount) = getAmount1In(
+                    _amount0Out,
+                    _token0OverToken1Price,
+                    _storage.token0PurchaseFee
+                );
+                if (_expectedAmount1In > _token1In) revert InsufficientInputAmount();
+            } else {
+                // we are sending token1 out, receiving token0 in
+                uint256 _expectedAmount0In;
+                (_expectedAmount0In, _token1FeesAmount) = getAmount0In(
+                    _amount1Out,
+                    _token0OverToken1Price,
+                    _storage.token1PurchaseFee
+                );
+                if (_expectedAmount0In > _token0In) revert InsufficientInputAmount();
+            }
+
+            emit SwapFees({ token0FeesAccumulated: _token0FeesAmount, token1FeesAccumulated: _token1FeesAmount });
+
+            // Calculate new fees + reserves in memory struct
+            _storage.token0FeesAccumulated += _token0FeesAmount.toUint128();
+            _storage.token1FeesAccumulated += _token1FeesAmount.toUint128();
+            _storage.reserve0 = (_finalToken0Balance - _storage.token0FeesAccumulated).toUint112();
+            _storage.reserve1 = (_finalToken1Balance - _storage.token1FeesAccumulated).toUint112();
         }
 
-        // Update reserves
-        _sync(_finalToken0Balance, _finalToken1Balance);
+        // Effects: update storage
+        _getPointerToStorage().swapStorage = _storage;
+        emit Sync({ reserve0: _storage.reserve0, reserve1: _storage.reserve1 });
 
         // emit event
         emit Swap({
@@ -348,10 +399,17 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
         // Calculations: determine amounts based on path
-
-        uint256 _amountOut = _tokenOut == _storage.token0
-            ? getAmount0Out(_amountIn, _token0OverToken1Price, _storage.token0PurchaseFee)
-            : getAmount1Out(_amountIn, _token0OverToken1Price, _storage.token1PurchaseFee);
+        (uint256 _amountOut, ) = _tokenOut == _storage.token0
+            ? getAmount0Out({
+                _amount1In: _amountIn,
+                _token0OverToken1Price: _token0OverToken1Price,
+                _token0PurchaseFee: _storage.token0PurchaseFee
+            })
+            : getAmount1Out({
+                _amount0In: _amountIn,
+                _token0OverToken1Price: _token0OverToken1Price,
+                _token1PurchaseFee: _storage.token1PurchaseFee
+            });
 
         // Checks: amountOut must not be smaller than the amountOutMin
         if (_amountOut < _amountOutMin) revert InsufficientOutputAmount();
@@ -396,7 +454,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
 
         // Calculations: determine amounts based on path
-        uint256 _amountIn = _tokenIn == _storage.token0
+        (uint256 _amountIn, ) = _tokenIn == _storage.token0
             ? getAmount0In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee)
             : getAmount1In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee);
         // Checks: amountInMax must be larger or equal to than the amountIn
@@ -421,16 +479,30 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @dev This function is used to sync the reserves of the pair
     function sync() external {
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
-        _sync(IERC20(_storage.token0).balanceOf(address(this)), IERC20(_storage.token1).balanceOf(address(this)));
+        _sync({
+            _token0Balance: IERC20(_storage.token0).balanceOf(address(this)),
+            _token1Balance: IERC20(_storage.token1).balanceOf(address(this)),
+            _token0FeesAccumulated: _storage.token0FeesAccumulated,
+            _token1FeesAccumulated: _storage.token1FeesAccumulated
+        });
         emit Sync({ reserve0: _storage.reserve0, reserve1: _storage.reserve1 });
     }
 
-    /// @notice The ```_sync``` function syncs the reserves of the pair
-    /// @param _token0balance The balance of token0
+    /// @notice The ```_sync``` function syncs the reserves + fees of the pair
+    /// @param _token0Balance The balance of token0
     /// @param _token1Balance The balance of token1
-    function _sync(uint256 _token0balance, uint256 _token1Balance) internal {
-        _getPointerToStorage().swapStorage.reserve0 = _token0balance.toUint112();
-        _getPointerToStorage().swapStorage.reserve1 = _token1Balance.toUint112();
+    /// @param _token0FeesAccumulated The amount of token0 fees accumulated
+    /// @param _token1FeesAccumulated The amount of token1 fees accumulated
+    function _sync(
+        uint256 _token0Balance,
+        uint256 _token1Balance,
+        uint256 _token0FeesAccumulated,
+        uint256 _token1FeesAccumulated
+    ) internal {
+        _getPointerToStorage().swapStorage.reserve0 = (_token0Balance - _token0FeesAccumulated).toUint112();
+        _getPointerToStorage().swapStorage.reserve1 = (_token1Balance - _token1FeesAccumulated).toUint112();
+        _getPointerToStorage().swapStorage.token0FeesAccumulated = _token0FeesAccumulated.toUint128();
+        _getPointerToStorage().swapStorage.token1FeesAccumulated = _token1FeesAccumulated.toUint128();
     }
 
     /// @notice The ```calculatePrice``` function calculates the current price of the pair using a simple compounding model
@@ -544,18 +616,26 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         address indexed to
     );
 
+    /// @notice Emitted when fees are accumulated
+    /// @param token0FeesAccumulated The amount of token0 accumulated as fees
+    /// @param token1FeesAccumulated The amount of token1 accumulated as fees
+    event SwapFees(uint256 token0FeesAccumulated, uint256 token1FeesAccumulated);
+
     /// @notice Emitted when the reserves are synced
     /// @param reserve0 The reserve of token0
     /// @param reserve1 The reserve of token1
     event Sync(uint256 reserve0, uint256 reserve1);
+
+    /// @notice Emitted when the fee receiver is set
+    /// @param feeReceiver The address of the fee receiver
+    event SetFeeReceiver(address indexed feeReceiver);
 
     // ============================================================================================
     // Errors
     // ============================================================================================
 
     /// @notice Emitted when an invalid token is passed to a function
-    /// @param token The address of the token that was invalid
-    error InvalidTokenAddress(address token);
+    error InvalidTokenAddress();
 
     /// @notice Emitted when an invalid path is passed to a function
     error InvalidPath();
@@ -599,4 +679,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
     /// @notice Emitted when the min annualized interest rate is greater than the max annualized interest rate
     error MinAnnualizedInterestRateGreaterThanMax();
+
+    /// @notice Emitted when there are insufficient tokens available for withrawal
+    error InsufficientTokens();
 }

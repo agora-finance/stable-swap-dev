@@ -14,8 +14,10 @@
     "@openzeppelin/contracts": "^5.0.1",
     "@openzeppelin/contracts-upgradeable": "^5.0.2",
     "agora-contracts": "github:agora-finance/contracts",
+    "decimal.js": "^10.5.0",
     "ds-test": "github:dapphub/ds-test",
-    "forge-std": "github:foundry-rs/forge-std"
+    "forge-std": "github:foundry-rs/forge-std",
+    "viem": "^2.22.19"
   },
   "devDependencies": {
     "husky": "^8.0.3",
