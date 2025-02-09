@@ -55,17 +55,19 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     }
 
     /// @notice The ```setApprovedSwapper``` function sets the approved swapper
-    /// @param _approvedSwapper The address of the approved swapper
+    /// @param _approvedSwappers The addresses of the approved swappers
     /// @param _setApproved The boolean value indicating whether the swapper is approved
-    function setApprovedSwapper(address _approvedSwapper, bool _setApproved) public {
+    function setApprovedSwappers(address[] memory _approvedSwappers, bool _setApproved) public {
         // Checks: Only the whitelister can set the approved swapper
         _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
 
-        // Effects: Set the isApproved state
-        _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwapper, _addRole: _setApproved });
+        for (uint256 _i = 0; _i < _approvedSwappers.length; _i++) {
+            // Effects: Set the isApproved state
+            _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwappers[_i], _addRole: _setApproved });
 
-        // emit event
-        emit SetApprovedSwapper({ approvedSwapper: _approvedSwapper, isApproved: _setApproved });
+            // emit event
+            emit SetApprovedSwapper({ approvedSwapper: _approvedSwappers[_i], isApproved: _setApproved });
+        }
     }
 
     /// @notice The ```setFeeBounds``` function sets the fee bounds

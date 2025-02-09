@@ -161,7 +161,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
 
     function _setApprovedSwapperAsWhitelister(AgoraStableSwapPair _pair, address _newSwapper) internal {
         hoax(_pair.getRoleMembers(WHITELISTER_ROLE)[0]);
-        _pair.setApprovedSwapper(_newSwapper, true);
+        _pair.setApprovedSwappers(new address[](0).concat(_newSwapper), true);
     }
 
     function _setFeesAsFeeSetter(
