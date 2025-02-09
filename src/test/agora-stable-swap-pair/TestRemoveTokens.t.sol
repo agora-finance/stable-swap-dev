@@ -16,9 +16,8 @@ contract TestRemoveTokens is BaseTest {
         /// BACKGROUND:
         _defaultSetup();
 
-        // Deploy a non-reserve token for testing
-        nonReserveToken = address(new MockERC20("Non Reserve Token", "NRT", 18));
-        deal(nonReserveToken, address(pair), INITIAL_BALANCE);
+        nonReserveToken = Constants.Mainnet.USDC_ERC20;
+        _seedErc20({ _tokenAddress: nonReserveToken, _to: address(pair), _amount: INITIAL_BALANCE });
 
         assertTrue({
             err: "/// GIVEN: tokenRemover has privileges over the pair",
@@ -28,6 +27,7 @@ contract TestRemoveTokens is BaseTest {
 
     function test_CanRemoveToken0() public {
         address _token0 = pair.token0();
+        _seedErc20({ _tokenAddress: _token0, _to: address(pair), _amount: INITIAL_BALANCE });
         uint256 _initialTokenBalance = IERC20(_token0).balanceOf(address(pair));
         uint256 _initialToken0FeesAccumulated = pair.token0FeesAccumulated();
         address _tokenReceiver = pair.tokenReceiverAddress();
@@ -61,6 +61,7 @@ contract TestRemoveTokens is BaseTest {
 
     function test_CanRemoveToken1() public {
         address _token1 = pair.token1();
+        _seedErc20({ _tokenAddress: _token1, _to: address(pair), _amount: INITIAL_BALANCE });
         uint256 _initialTokenBalance = IERC20(_token1).balanceOf(address(pair));
         uint256 _initialToken1FeesAccumulated = pair.token1FeesAccumulated();
         address _tokenReceiver = pair.tokenReceiverAddress();
