@@ -87,7 +87,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
     /// @notice The ```initialize``` function initializes the AgoraStableSwapPair contract
     /// @param _params The parameters for the initialization
-    function initialize(InitializeParams memory _params) public initializer {
+    function initialize(InitializeParams memory _params) external initializer {
         // Check decimals match decimals of token0 and token1
         if (_params.token0Decimals != IERC20Metadata(_params.token0).decimals()) revert IncorrectDecimals();
         if (_params.token1Decimals != IERC20Metadata(_params.token1).decimals()) revert IncorrectDecimals();

@@ -514,12 +514,6 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @param amount The amount of tokens to remove
     event RemoveTokens(address indexed tokenAddress, uint256 amount);
 
-    /// @notice The ```AddTokens``` event is emitted when tokens are added
-    /// @param tokenAddress The address of the token
-    /// @param from The address of the sender
-    /// @param amount The amount of tokens to add
-    event AddTokens(address indexed tokenAddress, address from, uint256 amount);
-
     /// @notice The ```SetPaused``` event is emitted when the pair is paused
     /// @param isPaused The boolean value indicating whether the pair is paused
     event SetPaused(bool isPaused);
@@ -583,9 +577,6 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
     /// @notice Emitted when an invalid path length is passed to a function
     error InvalidPathLength();
-
-    /// @notice Emitted when an invalid swap amount is returned from a function
-    error InvalidAmount();
 
     /// @notice Emitted when both amounts cannot be non-zero
     error InvalidSwapAmounts();

@@ -28,7 +28,6 @@ interface IAgoraStableSwapPair {
     error InsufficientInputAmount();
     error InsufficientLiquidity();
     error InsufficientOutputAmount();
-    error InvalidAmount();
     error InvalidInitialization();
     error InvalidPath();
     error InvalidSwapAmounts();
@@ -44,7 +43,6 @@ interface IAgoraStableSwapPair {
     error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
     error SafeERC20FailedOperation(address token);
 
-    event AddTokens(address indexed tokenAddress, address from, uint256 amount);
     event ConfigureOraclePrice(uint256 basePrice, int256 annualizedInterestRate);
     event Initialized(uint64 version);
     event RemoveTokens(address indexed tokenAddress, uint256 amount);
