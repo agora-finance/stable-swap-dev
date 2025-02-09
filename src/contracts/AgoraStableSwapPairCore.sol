@@ -22,26 +22,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-/// @notice The ```InitializeParams``` struct is used to initialize the AgoraStableSwapPair
-/// @param token0 The address of the first token in the pair
-/// @param token1 The address of the second token in the pair
-/// @param token0PurchaseFee The purchase fee for the first token in the pair
-/// @param token1PurchaseFee The purchase fee for the second token in the pair
-/// @param initialFeeSetter The address of the initial fee setter
-/// @param initialTokenReceiver The address of the initial token receiver
-/// @param initialAdminAddress The address of the initial admin
-struct InitializeParams {
-    address token0;
-    uint8 token0Decimals;
-    address token1;
-    uint8 token1Decimals;
-    uint256 token0PurchaseFee;
-    uint256 token1PurchaseFee;
-    address initialFeeSetter;
-    address initialTokenReceiver;
-    address initialAdminAddress;
-}
-
 /// @title AgoraStableSwapPairCore
 /// @notice The AgoraStableSwapPairCore is a contract that manages the core logic for the AgoraStableSwapPair
 /// @author Agora
@@ -122,45 +102,6 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
     uint256 public constant PRICE_PRECISION = 1e18;
     uint256 public constant FEE_PRECISION = 1e18;
-
-    //==============================================================================
-    // Constructor & Initalization Functions
-    //==============================================================================
-
-    constructor() {
-        _disableInitializers();
-    }
-
-    /// @notice The ```initialize``` function initializes the AgoraStableSwapPairCore contract
-    /// @dev This function is called on the same transaction as the deployment of the contract
-    /// @param _params The parameters for the initialization
-    function initialize(InitializeParams memory _params) public initializer {
-        // Initialize the access control and oracle
-        _initializeAgoraStableSwapAccessControl({ _initialAdminAddress: _params.initialAdminAddress });
-
-        // Set oracle last updated & basePrice
-        _getPointerToStorage().swapStorage.priceLastUpdated = block.timestamp.toUint40();
-        _getPointerToStorage().swapStorage.basePrice = 1e18;
-        emit ConfigureOraclePrice({ basePrice: 1e18, annualizedInterestRate: 0 });
-
-        // Set the token0 and token1 and decimals
-        _getPointerToStorage().swapStorage.token0 = _params.token0;
-        _getPointerToStorage().configStorage.token0Decimals = _params.token0Decimals;
-        _getPointerToStorage().swapStorage.token1 = _params.token1;
-        _getPointerToStorage().configStorage.token1Decimals = _params.token1Decimals;
-
-        // Set the token0to1Fee and token1to0Fee
-        _getPointerToStorage().swapStorage.token0PurchaseFee = _params.token0PurchaseFee.toUint64();
-        _getPointerToStorage().swapStorage.token1PurchaseFee = _params.token1PurchaseFee.toUint64();
-        emit SetTokenPurchaseFees({
-            token0PurchaseFee: _params.token0PurchaseFee,
-            token1PurchaseFee: _params.token1PurchaseFee
-        });
-
-        // Set the tokenReceiverAddress
-        _getPointerToStorage().configStorage.tokenReceiverAddress = _params.initialTokenReceiver;
-        emit SetTokenReceiver({ tokenReceiver: _params.initialTokenReceiver });
-    }
 
     //==============================================================================
     // Internal Helper Functions
@@ -658,14 +599,19 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @notice Emitted when the token purchase fee is invalid
     error InvalidToken0PurchaseFee();
 
+    /// @notice Emitted when the token1 purchase fee is invalid
     error InvalidToken1PurchaseFee();
 
+    /// @notice Emitted when the input amount is excessive
     error ExcessiveInputAmount();
 
+    /// @notice Emitted when the output amount is insufficient
     error InsufficientOutputAmount();
 
+    /// @notice Emitted when the input amount is insufficient
     error InsufficientInputAmount();
 
+    /// @notice Emitted when the pair is paused
     error PairIsPaused();
 
     /// @notice Emitted when the price is out of bounds
@@ -682,4 +628,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
     /// @notice Emitted when there are insufficient tokens available for withrawal
     error InsufficientTokens();
+
+    /// @notice Emitted when the decimals of the tokens are invalid during initialization
+    error IncorrectDecimals();
 }

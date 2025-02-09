@@ -69,30 +69,30 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     }
 
     /// @notice The ```setFeeBounds``` function sets the fee bounds
-    /// @param minToken0PurchaseFee The minimum purchase fee for token0
-    /// @param maxToken0PurchaseFee The maximum purchase fee for token0
-    /// @param minToken1PurchaseFee The minimum purchase fee for token1
-    /// @param maxToken1PurchaseFee The maximum purchase fee for token1
+    /// @param _minToken0PurchaseFee The minimum purchase fee for token0
+    /// @param _maxToken0PurchaseFee The maximum purchase fee for token0
+    /// @param _minToken1PurchaseFee The minimum purchase fee for token1
+    /// @param _maxToken1PurchaseFee The maximum purchase fee for token1
     function setFeeBounds(
-        uint256 minToken0PurchaseFee,
-        uint256 maxToken0PurchaseFee,
-        uint256 minToken1PurchaseFee,
-        uint256 maxToken1PurchaseFee
-    ) external {
+        uint256 _minToken0PurchaseFee,
+        uint256 _maxToken0PurchaseFee,
+        uint256 _minToken1PurchaseFee,
+        uint256 _maxToken1PurchaseFee
+    ) public {
         // Checks: Only the admin can set the fee bounds
         _requireSenderIsRole({ _role: ADMIN_ROLE });
 
         // Effects: Set the fee bounds
-        _getPointerToStorage().configStorage.minToken0PurchaseFee = minToken0PurchaseFee;
-        _getPointerToStorage().configStorage.maxToken0PurchaseFee = maxToken0PurchaseFee;
-        _getPointerToStorage().configStorage.minToken1PurchaseFee = minToken1PurchaseFee;
-        _getPointerToStorage().configStorage.maxToken1PurchaseFee = maxToken1PurchaseFee;
+        _getPointerToStorage().configStorage.minToken0PurchaseFee = _minToken0PurchaseFee;
+        _getPointerToStorage().configStorage.maxToken0PurchaseFee = _maxToken0PurchaseFee;
+        _getPointerToStorage().configStorage.minToken1PurchaseFee = _minToken1PurchaseFee;
+        _getPointerToStorage().configStorage.maxToken1PurchaseFee = _maxToken1PurchaseFee;
 
         emit SetFeeBounds({
-            minToken0PurchaseFee: minToken0PurchaseFee,
-            maxToken0PurchaseFee: maxToken0PurchaseFee,
-            minToken1PurchaseFee: minToken1PurchaseFee,
-            maxToken1PurchaseFee: maxToken1PurchaseFee
+            minToken0PurchaseFee: _minToken0PurchaseFee,
+            maxToken0PurchaseFee: _maxToken0PurchaseFee,
+            minToken1PurchaseFee: _minToken1PurchaseFee,
+            maxToken1PurchaseFee: _maxToken1PurchaseFee
         });
     }
 
@@ -219,7 +219,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         uint256 _maxBasePrice,
         int256 _minAnnualizedInterestRate,
         int256 _maxAnnualizedInterestRate
-    ) external {
+    ) public {
         _requireSenderIsRole({ _role: ADMIN_ROLE });
         // Check that the parameters are valid
         if (_minBasePrice > _maxBasePrice) revert MinBasePriceGreaterThanMaxBasePrice();
@@ -242,7 +242,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @dev Only the price setter can configure the price
     /// @param _basePrice The base price of the pair
     /// @param _annualizedInterestRate The annualized interest rate
-    function configureOraclePrice(uint256 _basePrice, int256 _annualizedInterestRate) external {
+    function configureOraclePrice(uint256 _basePrice, int256 _annualizedInterestRate) public {
         _requireSenderIsRole({ _role: PRICE_SETTER_ROLE });
 
         ConfigStorage memory _storage = _getPointerToStorage().configStorage;

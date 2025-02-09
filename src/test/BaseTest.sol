@@ -22,8 +22,8 @@ import { DeployAgoraStableSwapPairReturn, deployAgoraStableSwapPair } from "scri
 import { AgoraAccessControl } from "agora-contracts/access-control/AgoraAccessControl.sol";
 
 import { AgoraProxyAdmin } from "agora-contracts/proxy/AgoraProxyAdmin.sol";
-import { AgoraStableSwapPair } from "contracts/AgoraStableSwapPair.sol";
-import { AgoraStableSwapPairCore, InitializeParams as AgoraStableSwapPairParams } from "contracts/AgoraStableSwapPairCore.sol";
+import { AgoraStableSwapPair, InitializeParams as AgoraStableSwapPairParams } from "contracts/AgoraStableSwapPair.sol";
+import { AgoraStableSwapPairCore } from "contracts/AgoraStableSwapPairCore.sol";
 
 contract BaseTest is Test, VmHelper, Constants.Helper {
     using AddressHelper for address;
@@ -56,6 +56,9 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
 
     string public constant APPROVED_SWAPPER = "APPROVED_SWAPPER";
 
+    address public tokenReceiverAddress;
+    address public feeReceiverAddress;
+
     // ProxyAdminConvenience variables
     address public proxyAdminAddress;
     AgoraProxyAdmin public proxyAdmin;
@@ -67,7 +70,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
     address public pairAddress;
     AgoraStableSwapPair public pair;
 
-    function _defaultSetup() internal {
+    function _defaultSetup() internal returns (AgoraStableSwapPairParams memory _agoraStableSwapPairParams) {
         // set env to block 21359209
         vm.createSelectFork("eth_mainnet", 21_359_209);
 
@@ -79,22 +82,39 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
             _feeSetterAddress: labelAndDeal("feeSetterAddress"),
             _tokenRemoverAddress: labelAndDeal("tokenRemoverAddress"),
             _pauserAddress: labelAndDeal("pauserAddress"),
-            _priceSetterAddress: labelAndDeal("priceSetterAddress")
+            _priceSetterAddress: labelAndDeal("priceSetterAddress"),
+            _tokenReceiverAddress: labelAndDeal("tokenReceiverAddress"),
+            _feeReceiverAddress: labelAndDeal("feeReceiverAddress")
         });
 
         // Deploy Contracts
         AgoraProxyAdmin _proxyAdmin = new AgoraProxyAdmin(proxyAdminOwnerAddress);
 
-        AgoraStableSwapPairParams memory _agoraStableSwapPairParams = AgoraStableSwapPairParams({
+        _agoraStableSwapPairParams = AgoraStableSwapPairParams({
             token0: Constants.Mainnet.AUSD_ERC20,
             token0Decimals: 6,
             token1: Constants.Mainnet.WETH_ERC20,
             token1Decimals: 18,
-            token0PurchaseFee: 100,
-            token1PurchaseFee: 500,
+            minToken0PurchaseFee: 0,
+            maxToken0PurchaseFee: 2e16,
+            minToken1PurchaseFee: 0,
+            maxToken1PurchaseFee: 5e16,
+            token0PurchaseFee: 0,
+            token1PurchaseFee: 0,
+            initialAdminAddress: adminAddress,
+            initialWhitelister: whitelisterAddress,
             initialFeeSetter: feeSetterAddress,
-            initialTokenReceiver: adminAddress,
-            initialAdminAddress: adminAddress
+            initialTokenRemover: tokenRemoverAddress,
+            initialPauser: pauserAddress,
+            initialPriceSetter: priceSetterAddress,
+            initialTokenReceiver: tokenReceiverAddress,
+            initialFeeReceiver: feeReceiverAddress,
+            minBasePrice: 1e6,
+            maxBasePrice: 3e18,
+            minAnnualizedInterestRate: 0,
+            maxAnnualizedInterestRate: 5e16,
+            basePrice: 2e18,
+            annualizedInterestRate: 5e16
         });
 
         DeployAgoraStableSwapPairReturn memory _pairDeployment = deployAgoraStableSwapPair(
@@ -133,29 +153,10 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
             .with_key(pairAddress)
             .checked_write(1e18); // 1 WETH
 
-        _setOraclePriceBoundsAsAdmin(pair, 1e6, 3e18, 0, 5e16);
-
-        // Set pair price
-        _configureOraclePriceAsPriceSetter(pair, 2e18, 5e16); // 2ausd:1weth, 5% interest rate
-
-        // set pair fees boundary
-        _setFeeBoundsAsAdmin({
-            _pair: pair,
-            _minToken0PurchaseFee: 0,
-            _maxToken0PurchaseFee: 2e16,
-            _minToken1PurchaseFee: 0,
-            _maxToken1PurchaseFee: 5e16
-        });
-
-        // setFees
-        _setFeesAsFeeSetter({
-            _pair: pair,
-            _token0PurchaseFee: 0e16, // 1%
-            _token1PurchaseFee: 0e16 // 5%
-        });
-
         // Add the default caller to approved swapper list
         _setApprovedSwapperAsWhitelister(pair, address(this));
+
+        return _agoraStableSwapPairParams;
     }
 
     function _setApprovedSwapperAsWhitelister(AgoraStableSwapPair _pair, address _newSwapper) internal {
@@ -215,7 +216,9 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         address _feeSetterAddress,
         address _tokenRemoverAddress,
         address _pauserAddress,
-        address _priceSetterAddress
+        address _priceSetterAddress,
+        address _tokenReceiverAddress,
+        address _feeReceiverAddress
     ) internal {
         proxyAdminOwnerAddress = _proxyAdminOwnerAddress;
         adminAddress = _adminAddress;
@@ -224,6 +227,8 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         tokenRemoverAddress = _tokenRemoverAddress;
         pauserAddress = _pauserAddress;
         priceSetterAddress = _priceSetterAddress;
+        tokenReceiverAddress = _tokenReceiverAddress;
+        feeReceiverAddress = _feeReceiverAddress;
     }
 
     function _setGlobalContractVariables(
