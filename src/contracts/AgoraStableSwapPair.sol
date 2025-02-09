@@ -302,15 +302,10 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     }
 
     /// @notice The ```getAmountsOut``` function calculates the amount of tokenOut returned from a given amount of tokenIn
-    /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountIn The amount of input tokenIn
     /// @param _path The path of the tokens
     /// @return _amounts The amount of returned output tokenOut
-    function getAmountsOut(
-        address _empty,
-        uint256 _amountIn,
-        address[] memory _path
-    ) public view returns (uint256[] memory _amounts) {
+    function getAmountsOut(uint256 _amountIn, address[] memory _path) public view returns (uint256[] memory _amounts) {
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
@@ -341,15 +336,10 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     }
 
     /// @notice The ```getAmountsIn``` function calculates the amount of input tokensIn required for a given amount tokensOut
-    /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountOut The amount of output tokenOut
     /// @param _path The path of the tokens
     /// @return _amounts The amount of required input tokenIn
-    function getAmountsIn(
-        address _empty,
-        uint256 _amountOut,
-        address[] memory _path
-    ) public view returns (uint256[] memory _amounts) {
+    function getAmountsIn(uint256 _amountOut, address[] memory _path) public view returns (uint256[] memory _amounts) {
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
