@@ -12,6 +12,8 @@ contract SetterFunctions is BaseTest {
 }
 
 contract TestSetters is BaseTest, SetterFunctions {
+    using ArrayHelper for address[];
+
     /// FEATURE: Configuration setters
     address payable public bob;
     address payable public alice;
@@ -39,7 +41,7 @@ contract TestSetters is BaseTest, SetterFunctions {
 
         /// WHEN: whitelister assigns the approvedSwapper role to alice
         hoax(whitelisterAddress);
-        pair.setApprovedSwapper(alice, true);
+        pair.setApprovedSwappers(new address[](0).concat(alice), true);
 
         assertTrue({
             err: "///THEN: alice should be an approved swapper",
@@ -56,7 +58,7 @@ contract TestSetters is BaseTest, SetterFunctions {
 
         vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, WHITELISTER_ROLE));
         /// WHEN: approvedSwapper is set to alice
-        pair.setApprovedSwapper(alice, true);
+        pair.setApprovedSwappers(new address[](0).concat(alice), true);
         /// THEN: approvedSwapper reverts when set to alice
         assertFalse(pair.hasRole(APPROVED_SWAPPER, alice), "/// THEN: approvedSwapper is not set to alice");
     }

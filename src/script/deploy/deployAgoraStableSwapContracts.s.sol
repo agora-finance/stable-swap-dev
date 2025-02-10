@@ -12,8 +12,8 @@ pragma solidity ^0.8.28;
 // ================== deployAgoraStableSwapContracts ==================
 // ====================================================================
 
-import { AgoraStableSwapPair } from "contracts/AgoraStableSwapPair.sol";
-import { AgoraStableSwapPairCore, InitializeParams as AgoraStableSwapPairParams } from "contracts/AgoraStableSwapPairCore.sol";
+import { AgoraStableSwapPair, InitializeParams as AgoraStableSwapPairParams } from "contracts/AgoraStableSwapPair.sol";
+import { AgoraStableSwapPairCore } from "contracts/AgoraStableSwapPairCore.sol";
 
 import { AgoraTransparentUpgradeableProxy, ConstructorParams as AgoraTransparentUpgradeableProxyParams } from "agora-contracts/proxy/AgoraTransparentUpgradeableProxy.sol";
 
@@ -38,7 +38,7 @@ function deployAgoraStableSwapPair(
         AgoraTransparentUpgradeableProxyParams({
             logic: address(_pair),
             proxyAdminAddress: _proxyAdminAddress,
-            data: abi.encodeWithSelector(AgoraStableSwapPairCore.initialize.selector, _agoraStableSwapPairParams)
+            data: abi.encodeWithSelector(AgoraStableSwapPair.initialize.selector, _agoraStableSwapPairParams)
         })
     );
     return

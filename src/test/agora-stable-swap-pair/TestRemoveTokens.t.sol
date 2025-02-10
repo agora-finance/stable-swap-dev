@@ -1,83 +1,171 @@
-// // SPDX-License-Identifier: ISC
-// pragma solidity ^0.8.28;
+// SPDX-License-Identifier: ISC
+pragma solidity ^0.8.28;
 
-// import "src/test/BaseTest.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "src/test/BaseTest.sol";
 
-// /* solhint-disable func-name-mixedcase */
-// contract TestRemoveTokens is BaseTest {
-//     /// FEATURE: Remove tokens from the pair
+/* solhint-disable func-name-mixedcase */
+contract TestRemoveTokens is BaseTest {
+    /// FEATURE: Remove tokens from the pair
 
-//     function setUp() public {
-//         /// BACKGROUND:
-//         _defaultSetup();
+    address public nonReserveToken;
+    uint256 public constant INITIAL_BALANCE = 1000e18;
+    uint256 public constant REMOVAL_AMOUNT = 100e18;
 
-//         assertTrue({
-//             err: "/// GIVEN: tokenRemover has privileges over the pair",
-//             data: pair.hasRole(TOKEN_REMOVER_ROLE, tokenRemoverAddress)
-//         });
-//     }
+    function setUp() public {
+        /// BACKGROUND:
+        _defaultSetup();
 
-//     function test_CanRemoveToken0() public {
-//         address _token0 = pair.token0();
-//         /// GIVEN: token0 balance is not 0
-//         uint256 _initialTokenBalance = IERC20(_token0).balanceOf(address(pair));
-//         assertTrue({ err: "/// GIVEN: token0 balance is not 0", data: _initialTokenBalance > 0 });
+        nonReserveToken = Constants.Mainnet.USDC_ERC20;
+        _seedErc20({ _tokenAddress: nonReserveToken, _to: address(pair), _amount: INITIAL_BALANCE });
 
-//         /// WHEN tokenRemover calls removeTokens with token0
-//         hoax(tokenRemoverAddress);
-//         pair.removeTokens(_token0, _initialTokenBalance);
+        assertTrue({
+            err: "/// GIVEN: tokenRemover has privileges over the pair",
+            data: pair.hasRole(TOKEN_REMOVER_ROLE, tokenRemoverAddress)
+        });
+    }
 
-//         uint256 _finalTokenBalance = IERC20(_token0).balanceOf(address(pair));
-//         assertTrue({ err: "/// THEN: token0 balance should be 0", data: _finalTokenBalance == 0 });
-//     }
+    function test_CanRemoveToken0() public {
+        address _token0 = pair.token0();
+        _seedErc20({ _tokenAddress: _token0, _to: address(pair), _amount: INITIAL_BALANCE });
+        uint256 _initialTokenBalance = IERC20(_token0).balanceOf(address(pair));
+        uint256 _initialToken0FeesAccumulated = pair.token0FeesAccumulated();
+        address _tokenReceiver = pair.tokenReceiverAddress();
 
-//     function test_CannotRemoveToken0IfNotTokenRemover() public {
-//         /// GIVEN: token0 balance is not 0
-//         address _token0 = pair.token0();
-//         uint256 _initialTokenBalance = IERC20(_token0).balanceOf(address(pair));
-//         assertTrue({ err: "/// GIVEN: token0 balance is not 0", data: _initialTokenBalance > 0 });
+        assertTrue({
+            err: "/// GIVEN: token0 balance is greater than the removal amount",
+            data: _initialTokenBalance > REMOVAL_AMOUNT
+        });
 
-//         /// WHEN unpriviledged user calls removeTokens with token0
-//         /// THEN: call reverts and token0 balance should not have changed
-//         vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, TOKEN_REMOVER_ROLE));
-//         pair.removeTokens(_token0, _initialTokenBalance);
+        /// WHEN: tokenRemover calls removeTokens with token0
+        hoax(tokenRemoverAddress);
+        pair.removeTokens(_token0, REMOVAL_AMOUNT);
 
-//         uint256 _finalTokenBalance = IERC20(_token0).balanceOf(address(pair));
-//         assertTrue({
-//             err: "/// THEN: token0 balance should not have changed",
-//             data: _finalTokenBalance == _initialTokenBalance
-//         });
-//     }
+        /// THEN: token balance should decrease by removal amount
+        assertEq(
+            IERC20(_token0).balanceOf(address(pair)),
+            _initialTokenBalance - REMOVAL_AMOUNT,
+            "Token balance should decrease by removal amount"
+        );
 
-//     function test_CanRemoveToken1() public {
-//         /// GIVEN: token1 balance is not 0
-//         address _token1 = pair.token1();
-//         uint256 _initialTokenBalance = IERC20(_token1).balanceOf(address(pair));
-//         assertTrue({ err: "/// GIVEN: token1 balance is not 0", data: _initialTokenBalance > 0 });
+        /// THEN: token receiver should receive the tokens
+        assertEq(IERC20(_token0).balanceOf(_tokenReceiver), REMOVAL_AMOUNT, "Token receiver should receive the tokens");
 
-//         /// WHEN tokenRemover calls removeTokens with token1
-//         hoax(tokenRemoverAddress);
-//         pair.removeTokens(_token1, _initialTokenBalance);
+        /// THEN: fees accumulated should remain unchanged
+        assertEq(
+            pair.token0FeesAccumulated(),
+            _initialToken0FeesAccumulated,
+            "Fees accumulated should remain unchanged"
+        );
+    }
 
-//         uint256 _finalTokenBalance = IERC20(_token1).balanceOf(address(pair));
-//         assertTrue({ err: "/// THEN: token1 balance should be 0", data: _finalTokenBalance == 0 });
-//     }
+    function test_CanRemoveToken1() public {
+        address _token1 = pair.token1();
+        _seedErc20({ _tokenAddress: _token1, _to: address(pair), _amount: INITIAL_BALANCE });
+        uint256 _initialTokenBalance = IERC20(_token1).balanceOf(address(pair));
+        uint256 _initialToken1FeesAccumulated = pair.token1FeesAccumulated();
+        address _tokenReceiver = pair.tokenReceiverAddress();
 
-//     function test_CannotRemoveToken1IfNotTokenRemover() public {
-//         /// GIVEN: token1 balance is not 0
-//         address _token1 = pair.token1();
-//         uint256 _initialTokenBalance = IERC20(_token1).balanceOf(address(pair));
-//         assertTrue({ err: "/// GIVEN: token1 balance is not 0", data: _initialTokenBalance > 0 });
+        assertTrue({ err: "/// GIVEN: token1 balance is not 0", data: _initialTokenBalance > REMOVAL_AMOUNT });
 
-//         /// WHEN unpriviledged user calls removeTokens with token1
-//         /// THEN: call reverts and token1 balance should not have changed
-//         vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, TOKEN_REMOVER_ROLE));
-//         pair.removeTokens(_token1, _initialTokenBalance);
+        /// WHEN: tokenRemover calls removeTokens with token1
+        hoax(tokenRemoverAddress);
+        pair.removeTokens(_token1, REMOVAL_AMOUNT);
 
-//         uint256 _finalTokenBalance = IERC20(_token1).balanceOf(address(pair));
-//         assertTrue({
-//             err: "/// THEN: token1 balance should not have changed",
-//             data: _finalTokenBalance == _initialTokenBalance
-//         });
-//     }
-// }
+        /// THEN: token balance should decrease by removal amount
+        assertEq(
+            IERC20(_token1).balanceOf(address(pair)),
+            _initialTokenBalance - REMOVAL_AMOUNT,
+            "Token balance should decrease by removal amount"
+        );
+
+        /// THEN: token receiver should receive the tokens
+        assertEq(IERC20(_token1).balanceOf(_tokenReceiver), REMOVAL_AMOUNT, "Token receiver should receive the tokens");
+
+        /// THEN: fees accumulated should remain unchanged
+        assertEq(
+            pair.token1FeesAccumulated(),
+            _initialToken1FeesAccumulated,
+            "Fees accumulated should remain unchanged"
+        );
+    }
+
+    function test_CannotRemoveToken0IfNotTokenRemover() public {
+        address _token0 = pair.token0();
+        uint256 _initialTokenBalance = IERC20(_token0).balanceOf(address(pair));
+
+        /// WHEN: unprivileged user calls removeTokens with token0
+        vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, TOKEN_REMOVER_ROLE));
+        pair.removeTokens(_token0, REMOVAL_AMOUNT);
+
+        /// THEN: token balance should remain unchanged
+        assertEq(
+            IERC20(_token0).balanceOf(address(pair)),
+            _initialTokenBalance,
+            "Token balance should remain unchanged"
+        );
+    }
+
+    function test_CannotRemoveToken1IfNotTokenRemover() public {
+        address _token1 = pair.token1();
+        uint256 _initialTokenBalance = IERC20(_token1).balanceOf(address(pair));
+
+        /// WHEN: unprivileged user calls removeTokens with token1
+        vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, TOKEN_REMOVER_ROLE));
+        pair.removeTokens(_token1, REMOVAL_AMOUNT);
+
+        /// THEN: token balance should remain unchanged
+        assertEq(
+            IERC20(_token1).balanceOf(address(pair)),
+            _initialTokenBalance,
+            "Token balance should remain unchanged"
+        );
+    }
+
+    function test_CannotRemoveMoreThanAvailableToken0() public {
+        address _token0 = pair.token0();
+        uint256 _availableBalance = IERC20(_token0).balanceOf(address(pair)) - pair.token0FeesAccumulated();
+
+        /// WHEN: tokenRemover tries to remove more than available balance
+        hoax(tokenRemoverAddress);
+        vm.expectRevert(AgoraStableSwapPairCore.InsufficientTokens.selector);
+        pair.removeTokens(_token0, _availableBalance + 1);
+    }
+
+    function test_CannotRemoveMoreThanAvailableToken1() public {
+        address _token1 = pair.token1();
+        uint256 _availableBalance = IERC20(_token1).balanceOf(address(pair)) - pair.token1FeesAccumulated();
+
+        /// WHEN: tokenRemover tries to remove more than available balance
+        hoax(tokenRemoverAddress);
+        vm.expectRevert(AgoraStableSwapPairCore.InsufficientTokens.selector);
+        pair.removeTokens(_token1, _availableBalance + 1);
+    }
+
+    function test_CanRemoveNonReserveToken() public {
+        uint256 _initialBalance = IERC20(nonReserveToken).balanceOf(address(pair));
+        address _tokenReceiver = pair.tokenReceiverAddress();
+
+        /// WHEN: tokenRemover removes non-reserve token
+        hoax(tokenRemoverAddress);
+        pair.removeTokens(nonReserveToken, REMOVAL_AMOUNT);
+
+        /// THEN: non-reserve token should be removed
+        assertEq(
+            IERC20(nonReserveToken).balanceOf(address(pair)),
+            _initialBalance - REMOVAL_AMOUNT,
+            "Non-reserve token balance should decrease"
+        );
+
+        /// THEN: token receiver should receive the tokens
+        assertEq(
+            IERC20(nonReserveToken).balanceOf(_tokenReceiver),
+            REMOVAL_AMOUNT,
+            "Token receiver should receive the non-reserve tokens"
+        );
+
+        /// THEN: reserve tokens and fees should remain unchanged
+        assertEq(pair.token0FeesAccumulated(), pair.token0FeesAccumulated(), "Token0 fees should remain unchanged");
+        assertEq(pair.token1FeesAccumulated(), pair.token1FeesAccumulated(), "Token1 fees should remain unchanged");
+    }
+}

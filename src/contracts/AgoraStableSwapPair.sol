@@ -14,13 +14,148 @@ pragma solidity ^0.8.28;
 
 import { AgoraStableSwapPairConfiguration } from "./AgoraStableSwapPairConfiguration.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+/// @notice The ```InitializeParams``` struct is used to initialize the AgoraStableSwapPair
+/// @param token0 The address of the first token in the pair
+/// @param token0Decimals The decimals of the first token in the pair
+/// @param token1 The address of the second token in the pair
+/// @param token1Decimals The decimals of the second token in the pair
+/// @param minToken0PurchaseFee The minimum purchase fee for the first token in the pair, 18 decimals precision, max value 1
+/// @param maxToken0PurchaseFee The maximum purchase fee for the first token in the pair, 18 decimals precision, max value 1
+/// @param minToken1PurchaseFee The minimum purchase fee for the second token in the pair, 18 decimals precision, max value 1
+/// @param maxToken1PurchaseFee The maximum purchase fee for the second token in the pair, 18 decimals precision, max value 1
+/// @param token0PurchaseFee The purchase fee for the first token in the pair, 18 decimals precision, max value 1
+/// @param token1PurchaseFee The purchase fee for the second token in the pair, 18 decimals precision, max value 1
+/// @param initialAdminAddress The address of the initial admin
+/// @param initialWhitelister The address of the initial whitelister
+/// @param initialFeeSetter The address of the initial fee setter
+/// @param initialTokenRemover The address of the initial token remover
+/// @param initialPauser The address of the initial pauser
+/// @param initialPriceSetter The address of the initial price setter
+/// @param initialTokenReceiver The address of the initial token receiver
+/// @param initialFeeReceiver The address of the initial fee receiver
+/// @param _minBasePrice The minimum base price, 18 decimals precision, max value determined by difference between decimals of token0 and token1
+/// @param _maxBasePrice The maximum base price, 18 decimals precision, max value determined by difference between decimals of token0 and token1
+/// @param _minAnnualizedInterestRate The minimum annualized interest rate, 18 decimals precision, given as number i.e. 1e16 = 1%
+/// @param _maxAnnualizedInterestRate The maximum annualized interest rate, 18 decimals precision, given as number i.e. 1e16 = 1%
+/// @param _basePrice The base price, 18 decimals precision, limited by token0 and token1 decimals
+/// @param _annualizedInterestRate The annualized interest rate, 18 decimals precision, given as number i.e. 1e16 = 1%
+struct InitializeParams {
+    address token0;
+    uint8 token0Decimals;
+    address token1;
+    uint8 token1Decimals;
+    uint256 minToken0PurchaseFee;
+    uint256 maxToken0PurchaseFee;
+    uint256 minToken1PurchaseFee;
+    uint256 maxToken1PurchaseFee;
+    uint256 token0PurchaseFee;
+    uint256 token1PurchaseFee;
+    address initialAdminAddress;
+    address initialWhitelister;
+    address initialFeeSetter;
+    address initialTokenRemover;
+    address initialPauser;
+    address initialPriceSetter;
+    address initialTokenReceiver;
+    address initialFeeReceiver;
+    uint256 minBasePrice;
+    uint256 maxBasePrice;
+    int256 minAnnualizedInterestRate;
+    int256 maxAnnualizedInterestRate;
+    uint256 basePrice;
+    int256 annualizedInterestRate;
+}
 
 /// @title AgoraStableSwapPair
 /// @notice The AgoraStableSwapPair is a contract that manages the core logic for the AgoraStableSwapPair
 /// @author Agora
 contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
+
+    //==============================================================================
+    // Constructor & Initalization Functions
+    //==============================================================================
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice The ```initialize``` function initializes the AgoraStableSwapPair contract
+    /// @param _params The parameters for the initialization
+    function initialize(InitializeParams memory _params) external initializer {
+        // Check decimals match decimals of token0 and token1
+        if (_params.token0Decimals != IERC20Metadata(_params.token0).decimals()) revert IncorrectDecimals();
+        if (_params.token1Decimals != IERC20Metadata(_params.token1).decimals()) revert IncorrectDecimals();
+
+        // Set the token0 and token1 and decimals
+        _getPointerToStorage().swapStorage.token0 = _params.token0;
+        _getPointerToStorage().configStorage.token0Decimals = _params.token0Decimals;
+        _getPointerToStorage().swapStorage.token1 = _params.token1;
+        _getPointerToStorage().configStorage.token1Decimals = _params.token1Decimals;
+
+        // Initialize the access control and oracle
+        _initializeAgoraStableSwapAccessControl({
+            _initialAdminAddress: _params.initialAdminAddress,
+            _initialWhitelister: _params.initialWhitelister,
+            _initialFeeSetter: _params.initialFeeSetter,
+            _initialTokenRemover: _params.initialTokenRemover,
+            _initialPauser: _params.initialPauser,
+            _initialPriceSetter: _params.initialPriceSetter
+        });
+
+        // assign roles to deployer for initialization
+        _assignRole({ _role: ADMIN_ROLE, _newAddress: msg.sender, _addRole: true });
+        _assignRole({ _role: PRICE_SETTER_ROLE, _newAddress: msg.sender, _addRole: true });
+        _assignRole({ _role: FEE_SETTER_ROLE, _newAddress: msg.sender, _addRole: true });
+
+        // Set the tokenReceiverAddress
+        setTokenReceiver({ _tokenReceiver: _params.initialTokenReceiver });
+
+        // Set the feeReceiver address
+        setFeeReceiver({ _feeReceiver: _params.initialFeeReceiver });
+
+        // Set the fee bounds
+        setFeeBounds({
+            _minToken0PurchaseFee: _params.minToken0PurchaseFee,
+            _maxToken0PurchaseFee: _params.maxToken0PurchaseFee,
+            _minToken1PurchaseFee: _params.minToken1PurchaseFee,
+            _maxToken1PurchaseFee: _params.maxToken1PurchaseFee
+        });
+
+        // Set the token0to1Fee and token1to0Fee
+        setTokenPurchaseFees({
+            _token0PurchaseFee: _params.token0PurchaseFee,
+            _token1PurchaseFee: _params.token1PurchaseFee
+        });
+
+        // Configure oracle price bounds
+        setOraclePriceBounds({
+            _minBasePrice: _params.minBasePrice,
+            _maxBasePrice: _params.maxBasePrice,
+            _minAnnualizedInterestRate: _params.minAnnualizedInterestRate,
+            _maxAnnualizedInterestRate: _params.maxAnnualizedInterestRate
+        });
+
+        // Configure the oracle price
+        configureOraclePrice({
+            _basePrice: _params.basePrice,
+            _annualizedInterestRate: _params.annualizedInterestRate
+        });
+
+        // Remove privileges from deployer
+        _assignRole({ _role: ADMIN_ROLE, _newAddress: msg.sender, _addRole: false });
+        _assignRole({ _role: PRICE_SETTER_ROLE, _newAddress: msg.sender, _addRole: false });
+        _assignRole({ _role: FEE_SETTER_ROLE, _newAddress: msg.sender, _addRole: false });
+    }
+
+    //==============================================================================
+    //  View Functions
+    //==============================================================================
 
     /// @notice The ```token0``` function returns the address of the token0 in the pair
     /// @return _token0 The address of the token0 in the pair
@@ -28,10 +163,22 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().swapStorage.token0;
     }
 
+    /// @notice The ```token0Decimals``` function returns the decimals of the token0 in the pair
+    /// @return _token0Decimals The decimals of the token0 in the pair
+    function token0Decimals() public view returns (uint8) {
+        return _getPointerToStorage().configStorage.token0Decimals;
+    }
+
     /// @notice The ```token1``` function returns the address of the token1 in the pair
     /// @return _token1 The address of the token1 in the pair
     function token1() public view returns (address) {
         return _getPointerToStorage().swapStorage.token1;
+    }
+
+    /// @notice The ```token1Decimals``` function returns the decimals of the token1 in the pair
+    /// @return _token1Decimals The decimals of the token1 in the pair
+    function token1Decimals() public view returns (uint8) {
+        return _getPointerToStorage().configStorage.token1Decimals;
     }
 
     /// @notice The ```token0PurchaseFee``` function returns the purchase fee for the token0 in the pair
@@ -136,16 +283,29 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().configStorage.maxAnnualizedInterestRate;
     }
 
+    /// @notice The ```token0FeesAccumulated``` function returns the accumulated fees for token0
+    /// @return _token0FeesAccumulated The accumulated fees for token0
+    function token0FeesAccumulated() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.token0FeesAccumulated;
+    }
+
+    /// @notice The ```token1FeesAccumulated``` function returns the accumulated fees for token1
+    /// @return _token1FeesAccumulated The accumulated fees for token1
+    function token1FeesAccumulated() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.token1FeesAccumulated;
+    }
+
+    /// @notice The ```feeReceiverAddress``` function returns the address of the fee receiver
+    /// @return _feeReceiverAddress The address of the fee receiver
+    function feeReceiverAddress() public view returns (address) {
+        return _getPointerToStorage().configStorage.feeReceiverAddress;
+    }
+
     /// @notice The ```getAmountsOut``` function calculates the amount of tokenOut returned from a given amount of tokenIn
-    /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountIn The amount of input tokenIn
     /// @param _path The path of the tokens
     /// @return _amounts The amount of returned output tokenOut
-    function getAmountsOut(
-        address _empty,
-        uint256 _amountIn,
-        address[] memory _path
-    ) public view returns (uint256[] memory _amounts) {
+    function getAmountsOut(uint256 _amountIn, address[] memory _path) public view returns (uint256[] memory _amounts) {
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
@@ -161,14 +321,14 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
         // path[1] represents our tokenOut
         if (_path[1] == _storage.token0) {
-            _amounts[1] = getAmount0Out({
-                _amountIn: _amountIn,
+            (_amounts[1], ) = getAmount0Out({
+                _amount1In: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token0PurchaseFee: _storage.token0PurchaseFee
             });
         } else {
-            _amounts[1] = getAmount1Out({
-                _amountIn: _amountIn,
+            (_amounts[1], ) = getAmount1Out({
+                _amount0In: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token1PurchaseFee: _storage.token1PurchaseFee
             });
@@ -176,15 +336,10 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     }
 
     /// @notice The ```getAmountsIn``` function calculates the amount of input tokensIn required for a given amount tokensOut
-    /// @param _empty empty variable to adhere to uniswapV2 interface, normally contains factory address
     /// @param _amountOut The amount of output tokenOut
     /// @param _path The path of the tokens
     /// @return _amounts The amount of required input tokenIn
-    function getAmountsIn(
-        address _empty,
-        uint256 _amountOut,
-        address[] memory _path
-    ) public view returns (uint256[] memory _amounts) {
+    function getAmountsIn(uint256 _amountOut, address[] memory _path) public view returns (uint256[] memory _amounts) {
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
@@ -201,14 +356,14 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
         // path[0] represents our tokenIn
         if (_path[0] == _storage.token0) {
-            _amounts[0] = getAmount0In({
-                _amountOut: _amountOut,
+            (_amounts[0], ) = getAmount0In({
+                _amount1Out: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token1PurchaseFee: _storage.token1PurchaseFee
             });
         } else {
-            _amounts[0] = getAmount1In({
-                _amountOut: _amountOut,
+            (_amounts[0], ) = getAmount1In({
+                _amount0Out: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
                 _token0PurchaseFee: _storage.token0PurchaseFee
             });

@@ -28,7 +28,6 @@ interface IAgoraStableSwapPair {
     error InsufficientInputAmount();
     error InsufficientLiquidity();
     error InsufficientOutputAmount();
-    error InvalidAmount();
     error InvalidInitialization();
     error InvalidPath();
     error InvalidSwapAmounts();
@@ -44,7 +43,6 @@ interface IAgoraStableSwapPair {
     error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
     error SafeERC20FailedOperation(address token);
 
-    event AddTokens(address indexed tokenAddress, address from, uint256 amount);
     event ConfigureOraclePrice(uint256 basePrice, int256 annualizedInterestRate);
     event Initialized(uint64 version);
     event RemoveTokens(address indexed tokenAddress, uint256 amount);
@@ -117,16 +115,8 @@ interface IAgoraStableSwapPair {
         uint256 _token0OverToken1Price,
         uint256 _token1PurchaseFee
     ) external pure returns (uint256 _amountOut);
-    function getAmountsIn(
-        address _empty,
-        uint256 _amountOut,
-        address[] memory _path
-    ) external view returns (uint256[] memory _amounts);
-    function getAmountsOut(
-        address _empty,
-        uint256 _amountIn,
-        address[] memory _path
-    ) external view returns (uint256[] memory _amounts);
+    function getAmountsIn(uint256 _amountOut, address[] memory _path) external view returns (uint256[] memory _amounts);
+    function getAmountsOut(uint256 _amountIn, address[] memory _path) external view returns (uint256[] memory _amounts);
     function getPrice() external view returns (uint256 _currentPrice);
     function getPriceNormalized() external view returns (uint256 _normalizedPrice);
     function getRoleMembers(string memory _role) external view returns (address[] memory _members);
@@ -147,7 +137,7 @@ interface IAgoraStableSwapPair {
     function requireValidPath(address[] memory _path, address _token0, address _token1) external pure;
     function reserve0() external view returns (uint256);
     function reserve1() external view returns (uint256);
-    function setApprovedSwapper(address _approvedSwapper, bool _setApproved) external;
+    function setApprovedSwappers(address[] memory _approvedSwappers, bool _setApproved) external;
     function setFeeBounds(
         uint256 minToken0PurchaseFee,
         uint256 maxToken0PurchaseFee,
