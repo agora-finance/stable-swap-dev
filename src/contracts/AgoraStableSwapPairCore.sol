@@ -482,10 +482,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         });
     }
 
-    /// @notice The ```_getPrice``` function returns the price of the pair at a given block timestamp
+    /// @notice The ```getPrice``` function returns the price of the pair at a given block timestamp
     /// @param _blockTimestamp The block timestamp for which we'd like to get the price
     /// @return _price The price of the pair at the given block timestamp
-    function _getPrice(uint256 _blockTimestamp) internal view returns (uint256 _price) {
+    function getPrice(uint256 _blockTimestamp) public view returns (uint256 _price) {
         SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         uint256 _lastUpdated = _swapStorage.priceLastUpdated;
         uint256 _basePrice = _swapStorage.basePrice;
