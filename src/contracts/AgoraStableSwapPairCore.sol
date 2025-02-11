@@ -446,22 +446,22 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         _getPointerToStorage().swapStorage.token1FeesAccumulated = _token1FeesAccumulated.toUint128();
     }
 
-    /// @notice The ```calculatePrice``` function calculates the current price of the pair using a simple compounding model
+    /// @notice The ```calculatePrice``` function calculates the price of the pair using a simple compounding model
     /// @param _lastUpdated The timestamp of the last price update
     /// @param _calculationTimestamp The timestamp for which we'd like to calculate the price
     /// @param _perSecondInterestRate The per second interest rate
     /// @param _basePrice The base price of the pair
-    /// @return _currentPrice The current price of the pair
+    /// @return _price The price of the pair
     function calculatePrice(
         uint256 _lastUpdated,
         uint256 _calculationTimestamp,
         int256 _perSecondInterestRate,
         uint256 _basePrice
-    ) public pure returns (uint256 _currentPrice) {
+    ) public pure returns (uint256 _price) {
         // Calculate the time elapsed since the last price update
         uint256 timeElapsed = _calculationTimestamp - _lastUpdated;
         // Calculate the compounded price
-        _currentPrice = _perSecondInterestRate >= 0
+        _price = _perSecondInterestRate >= 0
             ? ((_basePrice * (PRICE_PRECISION + uint256(_perSecondInterestRate) * timeElapsed)) / PRICE_PRECISION)
             : ((_basePrice * (PRICE_PRECISION - (uint256(-_perSecondInterestRate) * timeElapsed))) / PRICE_PRECISION);
     }
