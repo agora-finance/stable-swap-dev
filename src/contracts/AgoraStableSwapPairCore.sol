@@ -446,22 +446,22 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         _getPointerToStorage().swapStorage.token1FeesAccumulated = _token1FeesAccumulated.toUint128();
     }
 
-    /// @notice The ```calculatePrice``` function calculates the current price of the pair using a simple compounding model
+    /// @notice The ```calculatePrice``` function calculates the price of the pair using a simple compounding model
     /// @param _lastUpdated The timestamp of the last price update
-    /// @param _currentTimestamp The current timestamp
+    /// @param _timestamp The timestamp for which we'd like to calculate the price
     /// @param _perSecondInterestRate The per second interest rate
     /// @param _basePrice The base price of the pair
-    /// @return _currentPrice The current price of the pair
+    /// @return _price The price of the pair
     function calculatePrice(
         uint256 _lastUpdated,
-        uint256 _currentTimestamp,
+        uint256 _timestamp,
         int256 _perSecondInterestRate,
         uint256 _basePrice
-    ) public pure returns (uint256 _currentPrice) {
+    ) public pure returns (uint256 _price) {
         // Calculate the time elapsed since the last price update
-        uint256 timeElapsed = _currentTimestamp - _lastUpdated;
+        uint256 timeElapsed = _timestamp - _lastUpdated;
         // Calculate the compounded price
-        _currentPrice = _perSecondInterestRate >= 0
+        _price = _perSecondInterestRate >= 0
             ? ((_basePrice * (PRICE_PRECISION + uint256(_perSecondInterestRate) * timeElapsed)) / PRICE_PRECISION)
             : ((_basePrice * (PRICE_PRECISION - (uint256(-_perSecondInterestRate) * timeElapsed))) / PRICE_PRECISION);
     }
@@ -476,7 +476,23 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         int256 _perSecondInterestRate = _swapStorage.perSecondInterestRate;
         _currentPrice = calculatePrice({
             _lastUpdated: _lastUpdated,
-            _currentTimestamp: _currentTimestamp,
+            _timestamp: _currentTimestamp,
+            _perSecondInterestRate: _perSecondInterestRate,
+            _basePrice: _basePrice
+        });
+    }
+
+    /// @notice The ```getPrice``` function returns the price of the pair at a given block timestamp
+    /// @param _blockTimestamp The block timestamp for which we'd like to get the price
+    /// @return _price The price of the pair at the given block timestamp
+    function getPrice(uint256 _blockTimestamp) public view returns (uint256 _price) {
+        SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
+        uint256 _lastUpdated = _swapStorage.priceLastUpdated;
+        uint256 _basePrice = _swapStorage.basePrice;
+        int256 _perSecondInterestRate = _swapStorage.perSecondInterestRate;
+        _price = calculatePrice({
+            _lastUpdated: _lastUpdated,
+            _timestamp: _blockTimestamp,
             _perSecondInterestRate: _perSecondInterestRate,
             _basePrice: _basePrice
         });
