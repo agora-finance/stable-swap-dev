@@ -60,13 +60,13 @@ contract Deploy is Script {
             basePrice: 1e18,
             annualizedInterestRate: 1e16
         });
-        bytes memory _faucetInitialization = abi.encodeWithSelector(
+        bytes memory _initializationCalldata = abi.encodeWithSelector(
             AgoraStableSwapPair.initialize.selector,
             _pairParams
         );
 
         console.log("AgoraStableSwapPair params encoded:");
-        console.logBytes(_faucetInitialization);
+        console.logBytes(_initializationCalldata);
     }
 
     modifier broadcaster() {

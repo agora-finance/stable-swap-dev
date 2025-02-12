@@ -448,18 +448,18 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
     /// @notice The ```calculatePrice``` function calculates the price of the pair using a simple compounding model
     /// @param _lastUpdated The timestamp of the last price update
-    /// @param _calculationTimestamp The timestamp for which we'd like to calculate the price
+    /// @param _timestamp The timestamp for which we'd like to calculate the price
     /// @param _perSecondInterestRate The per second interest rate
     /// @param _basePrice The base price of the pair
     /// @return _price The price of the pair
     function calculatePrice(
         uint256 _lastUpdated,
-        uint256 _calculationTimestamp,
+        uint256 _timestamp,
         int256 _perSecondInterestRate,
         uint256 _basePrice
     ) public pure returns (uint256 _price) {
         // Calculate the time elapsed since the last price update
-        uint256 timeElapsed = _calculationTimestamp - _lastUpdated;
+        uint256 timeElapsed = _timestamp - _lastUpdated;
         // Calculate the compounded price
         _price = _perSecondInterestRate >= 0
             ? ((_basePrice * (PRICE_PRECISION + uint256(_perSecondInterestRate) * timeElapsed)) / PRICE_PRECISION)
@@ -476,7 +476,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         int256 _perSecondInterestRate = _swapStorage.perSecondInterestRate;
         _currentPrice = calculatePrice({
             _lastUpdated: _lastUpdated,
-            _calculationTimestamp: _currentTimestamp,
+            _timestamp: _currentTimestamp,
             _perSecondInterestRate: _perSecondInterestRate,
             _basePrice: _basePrice
         });
@@ -492,7 +492,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         int256 _perSecondInterestRate = _swapStorage.perSecondInterestRate;
         _price = calculatePrice({
             _lastUpdated: _lastUpdated,
-            _calculationTimestamp: _blockTimestamp,
+            _timestamp: _blockTimestamp,
             _perSecondInterestRate: _perSecondInterestRate,
             _basePrice: _basePrice
         });
