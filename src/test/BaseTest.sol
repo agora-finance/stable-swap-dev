@@ -37,7 +37,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
     address public proxyAdminOwnerAddress;
 
     address public adminAddress;
-    string public constant ADMIN_ROLE = "ADMIN_ROLE";
+    string public constant ACCESS_CONTROL_ADMIN_ROLE = "ACCESS_CONTROL_ADMIN_ROLE";
 
     address public whitelisterAddress;
     string public constant WHITELISTER_ROLE = "WHITELISTER_ROLE";
@@ -180,7 +180,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         int256 _minAnnualizedInterestRate,
         int256 _maxAnnualizedInterestRate
     ) internal {
-        hoax(_pair.getRoleMembers(ADMIN_ROLE)[0]);
+        hoax(_pair.getRoleMembers(ACCESS_CONTROL_ADMIN_ROLE)[0]);
         _pair.setOraclePriceBounds(
             _minBasePrice,
             _maxBasePrice,
@@ -205,7 +205,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         uint256 _minToken1PurchaseFee,
         uint256 _maxToken1PurchaseFee
     ) internal {
-        hoax(_pair.getRoleMembers(ADMIN_ROLE)[0]);
+        hoax(_pair.getRoleMembers(ACCESS_CONTROL_ADMIN_ROLE)[0]);
         _pair.setFeeBounds(_minToken0PurchaseFee, _maxToken0PurchaseFee, _minToken1PurchaseFee, _maxToken1PurchaseFee);
     }
 
@@ -255,7 +255,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         address _priceSetterAddress
     ) internal {
         /// BACKGROUND: adminAddress sets minterAddress, pauserAddress, burnerAddress, freezerAddress on the deployed contract
-        address[] memory _adminAddresses = _pair.getRoleMembers(ADMIN_ROLE);
+        address[] memory _adminAddresses = _pair.getRoleMembers(ACCESS_CONTROL_ADMIN_ROLE);
         startHoax(_adminAddresses[0]);
         _pair.assignRole(WHITELISTER_ROLE, _whitelisterAddress, true);
         _pair.assignRole(FEE_SETTER_ROLE, _feeSetterAddress, true);

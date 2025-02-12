@@ -13,6 +13,7 @@ pragma solidity ^0.8.28;
 // ====================================================================
 
 import { AgoraStableSwapPairConfiguration } from "./AgoraStableSwapPairConfiguration.sol";
+import { IAgoraStableSwapManager } from "./interfaces/IAgoraStableSwapManager.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -99,19 +100,19 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         _getPointerToStorage().configStorage.token1Decimals = _params.token1Decimals;
 
         // Initialize the access control and oracle
-        _initializeAgoraStableSwapAccessControl({
-            _initialAdminAddress: _params.initialAdminAddress,
-            _initialWhitelister: _params.initialWhitelister,
-            _initialFeeSetter: _params.initialFeeSetter,
-            _initialTokenRemover: _params.initialTokenRemover,
-            _initialPauser: _params.initialPauser,
-            _initialPriceSetter: _params.initialPriceSetter
-        });
+        // _initializeAgoraStableSwapAccessControl({
+        //     _initialAdminAddress: _params.initialAdminAddress,
+        //     _initialWhitelister: _params.initialWhitelister,
+        //     _initialFeeSetter: _params.initialFeeSetter,
+        //     _initialTokenRemover: _params.initialTokenRemover,
+        //     _initialPauser: _params.initialPauser,
+        //     _initialPriceSetter: _params.initialPriceSetter
+        // });
 
         // assign roles to deployer for initialization
-        _assignRole({ _role: ADMIN_ROLE, _newAddress: msg.sender, _addRole: true });
-        _assignRole({ _role: PRICE_SETTER_ROLE, _newAddress: msg.sender, _addRole: true });
-        _assignRole({ _role: FEE_SETTER_ROLE, _newAddress: msg.sender, _addRole: true });
+        // _assignRole({ _role: ACCESS_CONTROL_ADMIN_ROLE, _newAddress: msg.sender, _addRole: true });
+        // _assignRole({ _role: PRICE_SETTER_ROLE, _newAddress: msg.sender, _addRole: true });
+        // _assignRole({ _role: FEE_SETTER_ROLE, _newAddress: msg.sender, _addRole: true });
 
         // Set the tokenReceiverAddress
         setTokenReceiver({ _tokenReceiver: _params.initialTokenReceiver });
@@ -120,12 +121,12 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         setFeeReceiver({ _feeReceiver: _params.initialFeeReceiver });
 
         // Set the fee bounds
-        setFeeBounds({
-            _minToken0PurchaseFee: _params.minToken0PurchaseFee,
-            _maxToken0PurchaseFee: _params.maxToken0PurchaseFee,
-            _minToken1PurchaseFee: _params.minToken1PurchaseFee,
-            _maxToken1PurchaseFee: _params.maxToken1PurchaseFee
-        });
+        // setFeeBounds({
+        //     _minToken0PurchaseFee: _params.minToken0PurchaseFee,
+        //     _maxToken0PurchaseFee: _params.maxToken0PurchaseFee,
+        //     _minToken1PurchaseFee: _params.minToken1PurchaseFee,
+        //     _maxToken1PurchaseFee: _params.maxToken1PurchaseFee
+        // });
 
         // Set the token0to1Fee and token1to0Fee
         setTokenPurchaseFees({
@@ -134,12 +135,12 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         });
 
         // Configure oracle price bounds
-        setOraclePriceBounds({
-            _minBasePrice: _params.minBasePrice,
-            _maxBasePrice: _params.maxBasePrice,
-            _minAnnualizedInterestRate: _params.minAnnualizedInterestRate,
-            _maxAnnualizedInterestRate: _params.maxAnnualizedInterestRate
-        });
+        // setOraclePriceBounds({
+        //     _minBasePrice: _params.minBasePrice,
+        //     _maxBasePrice: _params.maxBasePrice,
+        //     _minAnnualizedInterestRate: _params.minAnnualizedInterestRate,
+        //     _maxAnnualizedInterestRate: _params.maxAnnualizedInterestRate
+        // });
 
         // Configure the oracle price
         configureOraclePrice({
@@ -148,9 +149,9 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         });
 
         // Remove privileges from deployer
-        _assignRole({ _role: ADMIN_ROLE, _newAddress: msg.sender, _addRole: false });
-        _assignRole({ _role: PRICE_SETTER_ROLE, _newAddress: msg.sender, _addRole: false });
-        _assignRole({ _role: FEE_SETTER_ROLE, _newAddress: msg.sender, _addRole: false });
+        // _assignRole({ _role: ACCESS_CONTROL_ADMIN_ROLE, _newAddress: msg.sender, _addRole: false });
+        // _assignRole({ _role: PRICE_SETTER_ROLE, _newAddress: msg.sender, _addRole: false });
+        // _assignRole({ _role: FEE_SETTER_ROLE, _newAddress: msg.sender, _addRole: false });
     }
 
     //==============================================================================
@@ -232,25 +233,25 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @notice The ```minToken0PurchaseFee``` function returns the minimum purchase fee for token0
     /// @return _minToken0PurchaseFee The minimum purchase fee for token0
     function minToken0PurchaseFee() public view returns (uint256) {
-        return _getPointerToStorage().configStorage.minToken0PurchaseFee;
+        return IAgoraStableSwapManager(_getPointerToStorage().configStorage.managerAddress).minToken0PurchaseFee();
     }
 
     /// @notice The ```maxToken0PurchaseFee``` function returns the maximum purchase fee for token0
     /// @return _maxToken0PurchaseFee The maximum purchase fee for token0
     function maxToken0PurchaseFee() public view returns (uint256) {
-        return _getPointerToStorage().configStorage.maxToken0PurchaseFee;
+        return IAgoraStableSwapManager(_getPointerToStorage().configStorage.managerAddress).maxToken0PurchaseFee();
     }
 
     /// @notice The ```minToken1PurchaseFee``` function returns the minimum purchase fee for token1
     /// @return _minToken1PurchaseFee The minimum purchase fee for token1
     function minToken1PurchaseFee() public view returns (uint256) {
-        return _getPointerToStorage().configStorage.minToken1PurchaseFee;
+        return IAgoraStableSwapManager(_getPointerToStorage().configStorage.managerAddress).minToken1PurchaseFee();
     }
 
     /// @notice The ```maxToken1PurchaseFee``` function returns the maximum purchase fee for token1
     /// @return _maxToken1PurchaseFee The maximum purchase fee for token1
     function maxToken1PurchaseFee() public view returns (uint256) {
-        return _getPointerToStorage().configStorage.maxToken1PurchaseFee;
+        return IAgoraStableSwapManager(_getPointerToStorage().configStorage.managerAddress).maxToken1PurchaseFee();
     }
 
     /// @notice The ```tokenReceiverAddress``` function returns the address of the token receiver
@@ -262,25 +263,25 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @notice The ```minBasePrice``` function returns the minimum base price
     /// @return _minBasePrice The minimum base price
     function minBasePrice() public view returns (uint256) {
-        return _getPointerToStorage().configStorage.minBasePrice;
+        return IAgoraStableSwapManager(_getPointerToStorage().configStorage.managerAddress).minBasePrice();
     }
 
     /// @notice The ```maxBasePrice``` function returns the maximum base price
     /// @return _maxBasePrice The maximum base price
     function maxBasePrice() public view returns (uint256) {
-        return _getPointerToStorage().configStorage.maxBasePrice;
+        return IAgoraStableSwapManager(_getPointerToStorage().configStorage.managerAddress).maxBasePrice();
     }
 
     /// @notice The ```minAnnualizedInterestRate``` function returns the minimum annualized interest rate
     /// @return _minAnnualizedInterestRate The minimum annualized interest rate
     function minAnnualizedInterestRate() public view returns (int256) {
-        return _getPointerToStorage().configStorage.minAnnualizedInterestRate;
+        return IAgoraStableSwapManager(_getPointerToStorage().configStorage.managerAddress).minAnnualizedInterestRate();
     }
 
     /// @notice The ```maxAnnualizedInterestRate``` function returns the maximum annualized interest rate
     /// @return _maxAnnualizedInterestRate The maximum annualized interest rate
     function maxAnnualizedInterestRate() public view returns (int256) {
-        return _getPointerToStorage().configStorage.maxAnnualizedInterestRate;
+        return IAgoraStableSwapManager(_getPointerToStorage().configStorage.managerAddress).maxAnnualizedInterestRate();
     }
 
     /// @notice The ```token0FeesAccumulated``` function returns the accumulated fees for token0

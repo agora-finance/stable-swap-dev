@@ -30,11 +30,26 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     // Privileged Configuration Functions
     //==============================================================================
 
+    function setManager(address _manager) public {
+        // Checks: Only the owner can set the manager
+        _requireSenderIsRole({ _role: "ACCESS_CONTROL_ADMIN_ROLE" });
+
+        // emit event
+        emit SetManager({ oldManager: _getPointerToStorage().configStorage.managerAddress, newManager: _manager });
+
+        // Effects: Set the manager
+        _getPointerToStorage().configStorage.managerAddress = _manager;
+    }
+
+    function _requireSenderIsManager() internal view {
+        if (_getPointerToStorage().configStorage.managerAddress != msg.sender) revert SenderIsNotManager();
+    }
+
     /// @notice The ```setTokenReceiver``` function sets the token receiver
     /// @param _tokenReceiver The address of the token receiver
     function setTokenReceiver(address _tokenReceiver) public {
-        // Checks: Only the admin can set the token receiver
-        _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
+        // Checks: Only the manager can set the token receiver
+        _requireSenderIsManager();
 
         // Effects: Set the token receiver
         _getPointerToStorage().configStorage.tokenReceiverAddress = _tokenReceiver;
@@ -44,8 +59,8 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     }
 
     function setFeeReceiver(address _feeReceiver) public {
-        // Checks: Only the admin can set the fee receiver
-        _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
+        // Checks: Only the manager can set the fee receiver
+        _requireSenderIsManager();
 
         // Effects: Set the fee receiver
         _getPointerToStorage().configStorage.feeReceiverAddress = _feeReceiver;
@@ -54,63 +69,9 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         emit SetFeeReceiver({ feeReceiver: _feeReceiver });
     }
 
-    /// @notice The ```setApprovedSwapper``` function sets the approved swapper
-    /// @param _approvedSwappers The addresses of the approved swappers
-    /// @param _setApproved The boolean value indicating whether the swapper is approved
-    function setApprovedSwappers(address[] memory _approvedSwappers, bool _setApproved) public {
-        // Checks: Only the whitelister can set the approved swapper
-        _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
-
-        for (uint256 _i = 0; _i < _approvedSwappers.length; _i++) {
-            // Effects: Set the isApproved state
-            _assignRole({ _role: APPROVED_SWAPPER, _newAddress: _approvedSwappers[_i], _addRole: _setApproved });
-
-            // emit event
-            emit SetApprovedSwapper({ approvedSwapper: _approvedSwappers[_i], isApproved: _setApproved });
-        }
-    }
-
-    /// @notice The ```setFeeBounds``` function sets the fee bounds
-    /// @param _minToken0PurchaseFee The minimum purchase fee for token0
-    /// @param _maxToken0PurchaseFee The maximum purchase fee for token0
-    /// @param _minToken1PurchaseFee The minimum purchase fee for token1
-    /// @param _maxToken1PurchaseFee The maximum purchase fee for token1
-    function setFeeBounds(
-        uint256 _minToken0PurchaseFee,
-        uint256 _maxToken0PurchaseFee,
-        uint256 _minToken1PurchaseFee,
-        uint256 _maxToken1PurchaseFee
-    ) public {
-        // Checks: Only the admin can set the fee bounds
-        _requireSenderIsRole({ _role: ADMIN_ROLE });
-
-        // Effects: Set the fee bounds
-        _getPointerToStorage().configStorage.minToken0PurchaseFee = _minToken0PurchaseFee;
-        _getPointerToStorage().configStorage.maxToken0PurchaseFee = _maxToken0PurchaseFee;
-        _getPointerToStorage().configStorage.minToken1PurchaseFee = _minToken1PurchaseFee;
-        _getPointerToStorage().configStorage.maxToken1PurchaseFee = _maxToken1PurchaseFee;
-
-        emit SetFeeBounds({
-            minToken0PurchaseFee: _minToken0PurchaseFee,
-            maxToken0PurchaseFee: _maxToken0PurchaseFee,
-            minToken1PurchaseFee: _minToken1PurchaseFee,
-            maxToken1PurchaseFee: _maxToken1PurchaseFee
-        });
-    }
-
     function setTokenPurchaseFees(uint256 _token0PurchaseFee, uint256 _token1PurchaseFee) public {
-        // Checks: Only the fee setter can set the fee
-        _requireIsRole({ _role: FEE_SETTER_ROLE, _address: msg.sender });
-
-        // Checks: Ensure the params are valid and within the bounds
-        if (
-            _token0PurchaseFee < _getPointerToStorage().configStorage.minToken0PurchaseFee ||
-            _token0PurchaseFee > _getPointerToStorage().configStorage.maxToken0PurchaseFee
-        ) revert InvalidToken0PurchaseFee();
-        if (
-            _token1PurchaseFee < _getPointerToStorage().configStorage.minToken1PurchaseFee ||
-            _token1PurchaseFee > _getPointerToStorage().configStorage.maxToken1PurchaseFee
-        ) revert InvalidToken1PurchaseFee();
+        // Checks: Only the manager can set the fee
+        _requireSenderIsManager();
 
         // Effects: write to storage
         _getPointerToStorage().swapStorage.token0PurchaseFee = _token0PurchaseFee.toUint64();
@@ -124,8 +85,8 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _tokenAddress The address of the token
     /// @param _amount The amount of tokens to remove
     function removeTokens(address _tokenAddress, uint256 _amount) external {
-        // Checks: Only the token remover can remove tokens
-        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
+        // Checks: Only the manager can remove tokens
+        _requireSenderIsManager();
 
         SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
@@ -159,8 +120,8 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _tokenAddress The address of the token
     /// @param _amount The amount of tokens to remove
     function collectFees(address _tokenAddress, uint256 _amount) external {
-        // Checks: Only the tokenRemover can remove tokens
-        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
+        // Checks: Only the manager can collect fees
+        _requireSenderIsManager();
 
         SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
@@ -194,14 +155,14 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         });
 
         // emit event
-        emit RemoveTokens({ tokenAddress: _tokenAddress, amount: _amount });
+        emit CollectFees({ tokenAddress: _tokenAddress, amount: _amount });
     }
 
     /// @notice The ```setPaused``` function sets the paused state of the pair
     /// @param _setPaused The boolean value indicating whether the pair is paused
     function setPaused(bool _setPaused) public {
-        // Checks: Only the pauser can pause the pair
-        _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
+        // Checks: Only the manager can pause the pair
+        _requireSenderIsManager();
 
         // Effects: Set the isPaused state
         _getPointerToStorage().swapStorage.isPaused = _setPaused;
@@ -210,51 +171,13 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         emit SetPaused({ isPaused: _setPaused });
     }
 
-    /// @notice The ```setOraclePriceBounds``` function sets the price bounds for the pair
-    /// @dev Only the admin can set the price bounds
-    /// @param _minBasePrice The minimum allowed initial base price
-    /// @param _maxBasePrice The maximum allowed initial base price
-    /// @param _minAnnualizedInterestRate The minimum allowed annualized interest rate
-    /// @param _maxAnnualizedInterestRate The maximum allowed annualized interest rate
-    function setOraclePriceBounds(
-        uint256 _minBasePrice,
-        uint256 _maxBasePrice,
-        int256 _minAnnualizedInterestRate,
-        int256 _maxAnnualizedInterestRate
-    ) public {
-        _requireSenderIsRole({ _role: ADMIN_ROLE });
-        // Check that the parameters are valid
-        if (_minBasePrice > _maxBasePrice) revert MinBasePriceGreaterThanMaxBasePrice();
-        if (_minAnnualizedInterestRate > _maxAnnualizedInterestRate) revert MinAnnualizedInterestRateGreaterThanMax();
-
-        _getPointerToStorage().configStorage.minBasePrice = _minBasePrice;
-        _getPointerToStorage().configStorage.maxBasePrice = _maxBasePrice;
-        _getPointerToStorage().configStorage.minAnnualizedInterestRate = _minAnnualizedInterestRate;
-        _getPointerToStorage().configStorage.maxAnnualizedInterestRate = _maxAnnualizedInterestRate;
-
-        emit SetOraclePriceBounds({
-            minBasePrice: _minBasePrice,
-            maxBasePrice: _maxBasePrice,
-            minAnnualizedInterestRate: _minAnnualizedInterestRate,
-            maxAnnualizedInterestRate: _maxAnnualizedInterestRate
-        });
-    }
-
     /// @notice The ```configureOraclePrice``` function configures the price of the pair
     /// @dev Only the price setter can configure the price
     /// @param _basePrice The base price of the pair
     /// @param _annualizedInterestRate The annualized interest rate
     function configureOraclePrice(uint256 _basePrice, int256 _annualizedInterestRate) public {
-        _requireSenderIsRole({ _role: PRICE_SETTER_ROLE });
-
-        ConfigStorage memory _storage = _getPointerToStorage().configStorage;
-
-        // Check that the price is within bounds
-        if (_basePrice < _storage.minBasePrice || _basePrice > _storage.maxBasePrice) revert BasePriceOutOfBounds();
-        if (
-            _annualizedInterestRate < _storage.minAnnualizedInterestRate ||
-            _annualizedInterestRate > _storage.maxAnnualizedInterestRate
-        ) revert AnnualizedInterestRateOutOfBounds();
+        // Checks: Only the manager can configure the price
+        _requireSenderIsManager();
 
         // Set the time of the last price update
         _getPointerToStorage().swapStorage.priceLastUpdated = (block.timestamp).toUint40();
@@ -266,4 +189,17 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         // emit eventd
         emit ConfigureOraclePrice(_basePrice, _annualizedInterestRate);
     }
+
+    /// @notice The ```SetManager``` event is emitted when the manager is set
+    /// @param oldManager The old manager
+    /// @param newManager The new manager
+    event SetManager(address indexed oldManager, address indexed newManager);
+
+    /// @notice The ```SenderIsNotManager``` error is thrown when the sender is not the manager
+    error SenderIsNotManager();
+
+    /// @notice The ```CollectFees``` event is emitted when fees are collected
+    /// @param tokenAddress The address of the token
+    /// @param amount The amount of tokens collected
+    event CollectFees(address indexed tokenAddress, uint256 amount);
 }

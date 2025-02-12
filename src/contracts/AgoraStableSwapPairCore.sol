@@ -11,21 +11,25 @@ pragma solidity ^0.8.28;
 // ====================================================================
 // ==================== AgoraStableSwapPairCore =======================
 // ====================================================================
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 
 import { AgoraStableSwapAccessControl } from "./AgoraStableSwapAccessControl.sol";
+import { IAgoraStableSwapManager } from "./interfaces/IAgoraStableSwapManager.sol";
 
+import { IAgoraWhitelist } from "./interfaces/IAgoraWhitelist.sol";
 import { IUniswapV2Callee } from "./interfaces/IUniswapV2Callee.sol";
 
+import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { AgoraAccessControl } from "agora-contracts/access-control/AgoraAccessControl.sol";
 
 /// @title AgoraStableSwapPairCore
 /// @notice The AgoraStableSwapPairCore is a contract that manages the core logic for the AgoraStableSwapPair
 /// @author Agora
-contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable, ReentrancyGuardTransient {
+contract AgoraStableSwapPairCore is AgoraAccessControl, Initializable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -33,16 +37,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     // Storage Structs
     //==============================================================================
     struct ConfigStorage {
-        uint256 minToken0PurchaseFee; // 18 decimals precision, max value 1
-        uint256 maxToken0PurchaseFee; // 18 decimals precision, max value 1
-        uint256 minToken1PurchaseFee; // 18 decimals precision, max value 1
-        uint256 maxToken1PurchaseFee; // 18 decimals precision, max value 1
         address tokenReceiverAddress;
         address feeReceiverAddress;
-        uint256 minBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
-        uint256 maxBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
-        int256 minAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
-        int256 maxAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
+        address managerAddress;
+        address whitelistAddress;
         uint8 token0Decimals;
         uint8 token1Decimals;
     }
@@ -222,7 +220,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @param _to The address to send the tokens to
     /// @param _data The data to send to the callback
     function swap(uint256 _amount0Out, uint256 _amount1Out, address _to, bytes memory _data) public nonReentrant {
-        _requireSenderIsRole({ _role: APPROVED_SWAPPER });
+        IAgoraWhitelist(_getPointerToStorage().configStorage.whitelistAddress).hasRole({
+            _role: "APPROVED_SWAPPER",
+            _address: msg.sender
+        });
 
         // Checks: input sanitation, force one amountOut to be 0, and the other to be > 0
         if ((_amount0Out != 0 && _amount1Out != 0) || (_amount0Out == 0 && _amount1Out == 0)) {
