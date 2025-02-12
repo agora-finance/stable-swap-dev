@@ -307,7 +307,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @return _amounts The amount of returned output tokenOut
     function getAmountsOut(uint256 _amountIn, address[] memory _path) public view returns (uint256[] memory _amounts) {
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
-        uint256 _token0OverToken1Price = getPrice();
+        uint256 _token0OverToken1Price = getPriceNormalized();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
         requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
@@ -341,7 +341,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @return _amounts The amount of required input tokenIn
     function getAmountsIn(uint256 _amountOut, address[] memory _path) public view returns (uint256[] memory _amounts) {
         SwapStorage memory _storage = _getPointerToStorage().swapStorage;
-        uint256 _token0OverToken1Price = getPrice();
+        uint256 _token0OverToken1Price = getPriceNormalized();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
         requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
@@ -372,9 +372,17 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
 
     /// @notice The ```getPriceNormalized``` function returns a price in a human-readable format adjusting for differences in precision
     /// @return _normalizedPrice The normalized price with 18 decimals of precision
-    function getPriceNormalized() external view returns (uint256 _normalizedPrice) {
+    function getPriceNormalized() public view returns (uint256 _normalizedPrice) {
         ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
         return (getPrice() * 10 ** _configStorage.token1Decimals) / 10 ** _configStorage.token0Decimals;
+    }
+
+    /// @notice The ```getPriceNormalized``` function returns a price in a human-readable format adjusting for differences in precision
+    /// @param _blockTimestamp The block timestamp for which we'd like to get the price
+    /// @return _normalizedPrice The normalized price with 18 decimals of precision
+    function getPriceNormalized(uint256 _blockTimestamp) public view returns (uint256 _normalizedPrice) {
+        ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
+        return (getPrice(_blockTimestamp) * 10 ** _configStorage.token1Decimals) / 10 ** _configStorage.token0Decimals;
     }
 
     /// @notice The ```Version``` struct is used to represent the version of the AgoraStableSwapPair
