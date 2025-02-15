@@ -25,10 +25,10 @@ contract TestSetters is BaseTest, SetterFunctions {
         bob = labelAndDeal("bob");
         alice = labelAndDeal("alice");
 
-        /// GIVEN: admin is set to ADMIN_ROLE
+        /// GIVEN: admin is set to ACCESS_CONTROL_ADMIN_ROLE
         assertTrue({
-            err: "/// GIVEN: admin is set to ADMIN_ROLE on pair",
-            data: pair.hasRole(ADMIN_ROLE, adminAddress)
+            err: "/// GIVEN: admin is set to ACCESS_CONTROL_ADMIN_ROLE on pair",
+            data: pair.hasRole(ACCESS_CONTROL_ADMIN_ROLE, adminAddress)
         });
     }
 
@@ -78,7 +78,9 @@ contract TestSetters is BaseTest, SetterFunctions {
         /// GIVEN: alice is not a fee setter
         assertFalse({ err: "/// GIVEN: alice is not a fee setter", data: pair.hasRole(FEE_SETTER_ROLE, alice) });
 
-        vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, ADMIN_ROLE));
+        vm.expectRevert(
+            abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, ACCESS_CONTROL_ADMIN_ROLE)
+        );
         /// WHEN: feeSetter is set to alice
         pair.assignRole(FEE_SETTER_ROLE, alice, true);
 
@@ -102,7 +104,9 @@ contract TestSetters is BaseTest, SetterFunctions {
 
         /// WHEN: feeSetter is set to alice
         /// THEN: call reverts and alice is not a token remover
-        vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, ADMIN_ROLE));
+        vm.expectRevert(
+            abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, ACCESS_CONTROL_ADMIN_ROLE)
+        );
         pair.assignRole(TOKEN_REMOVER_ROLE, alice, true);
     }
 
@@ -118,7 +122,9 @@ contract TestSetters is BaseTest, SetterFunctions {
         /// GIVEN: alice is not a pauser
         assertFalse({ err: "/// GIVEN: alice is not a pauser", data: pair.hasRole(PAUSER_ROLE, alice) });
 
-        vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, ADMIN_ROLE));
+        vm.expectRevert(
+            abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, ACCESS_CONTROL_ADMIN_ROLE)
+        );
         /// WHEN: pauser is set to alice
         pair.assignRole(PAUSER_ROLE, alice, true);
 

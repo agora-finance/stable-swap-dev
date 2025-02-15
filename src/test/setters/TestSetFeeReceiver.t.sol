@@ -17,7 +17,7 @@ contract TestSetFeeReceiver is BaseTest {
 
         assertTrue({
             err: "/// GIVEN: admin has privileges over the pair",
-            data: pair.hasRole(ADMIN_ROLE, adminAddress)
+            data: pair.hasRole(ACCESS_CONTROL_ADMIN_ROLE, adminAddress)
         });
     }
 
@@ -56,7 +56,9 @@ contract TestSetFeeReceiver is BaseTest {
     function test_CannotSetFeeReceiverIfNotAdmin() public {
         /// WHEN: non-admin tries to set fee receiver
         /// THEN: function should revert
-        vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, ADMIN_ROLE));
+        vm.expectRevert(
+            abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, ACCESS_CONTROL_ADMIN_ROLE)
+        );
         pair.setFeeReceiver(newFeeReceiver);
     }
 

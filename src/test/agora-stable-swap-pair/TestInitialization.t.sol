@@ -97,12 +97,16 @@ contract TestInitialization is BaseTest {
 
         // THEN: All roles should be properly assigned AND only have one address for each role
         assertTrue(
-            pair.hasRole(ADMIN_ROLE, _agoraStableSwapPairParams.initialAdminAddress),
+            pair.hasRole(ACCESS_CONTROL_ADMIN_ROLE, _agoraStableSwapPairParams.initialAdminAddress),
             "///THEN: admin role should be set in storage"
         );
-        assertEq(pair.getRoleMembers(ADMIN_ROLE).length, 1, "///THEN: admin role should have one address");
         assertEq(
-            pair.getRoleMembers(ADMIN_ROLE)[0],
+            pair.getRoleMembers(ACCESS_CONTROL_ADMIN_ROLE).length,
+            1,
+            "///THEN: admin role should have one address"
+        );
+        assertEq(
+            pair.getRoleMembers(ACCESS_CONTROL_ADMIN_ROLE)[0],
             _agoraStableSwapPairParams.initialAdminAddress,
             "///THEN: admin role should have the correct address"
         );

@@ -34,7 +34,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _tokenReceiver The address of the token receiver
     function setTokenReceiver(address _tokenReceiver) public {
         // Checks: Only the admin can set the token receiver
-        _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
+        _requireIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE, _address: msg.sender });
 
         // Effects: Set the token receiver
         _getPointerToStorage().configStorage.tokenReceiverAddress = _tokenReceiver;
@@ -45,7 +45,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
 
     function setFeeReceiver(address _feeReceiver) public {
         // Checks: Only the admin can set the fee receiver
-        _requireIsRole({ _role: ADMIN_ROLE, _address: msg.sender });
+        _requireIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE, _address: msg.sender });
 
         // Effects: Set the fee receiver
         _getPointerToStorage().configStorage.feeReceiverAddress = _feeReceiver;
@@ -82,7 +82,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         uint256 _maxToken1PurchaseFee
     ) public {
         // Checks: Only the admin can set the fee bounds
-        _requireSenderIsRole({ _role: ADMIN_ROLE });
+        _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
 
         // Effects: Set the fee bounds
         _getPointerToStorage().configStorage.minToken0PurchaseFee = _minToken0PurchaseFee;
@@ -222,7 +222,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         int256 _minAnnualizedInterestRate,
         int256 _maxAnnualizedInterestRate
     ) public {
-        _requireSenderIsRole({ _role: ADMIN_ROLE });
+        _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
         // Check that the parameters are valid
         if (_minBasePrice > _maxBasePrice) revert MinBasePriceGreaterThanMaxBasePrice();
         if (_minAnnualizedInterestRate > _maxAnnualizedInterestRate) revert MinAnnualizedInterestRateGreaterThanMax();
