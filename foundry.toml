@@ -29,7 +29,7 @@ bytecode_hash = "none"
 cbor_metadata = false
 # Contracts to track with --gas-report
 #gas_reports = []
-ignored_error_codes = [3628, 5574, 2018]
+ignored_error_codes = [3628, 5574, 2018, 2394]
 evm_version = "cancun"
 
 [rpc_endpoints]

@@ -37,7 +37,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
     address public proxyAdminOwnerAddress;
 
     address public adminAddress;
-    string public constant ADMIN_ROLE = "ADMIN_ROLE";
+    string public constant ACCESS_CONTROL_ADMIN_ROLE = "ACCESS_CONTROL_ADMIN_ROLE";
 
     address public whitelisterAddress;
     string public constant WHITELISTER_ROLE = "WHITELISTER_ROLE";
@@ -138,20 +138,9 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
             _priceSetterAddress: priceSetterAddress
         });
 
-        // Add tokens to pair
-        stdstore
-            .enable_packed_slots()
-            .target(Constants.Mainnet.AUSD_ERC20)
-            .sig("balanceOf(address)")
-            .with_key(pairAddress)
-            .checked_write((2e6) * 1e6); // 2 million tokens
-
-        stdstore
-            .enable_packed_slots()
-            .target(Constants.Mainnet.WETH_ERC20)
-            .sig("balanceOf(address)")
-            .with_key(pairAddress)
-            .checked_write(1e18); // 1 WETH
+        _seedErc20({ _tokenAddress: pair.token0(), _to: pairAddress, _amount: 2e6 * 1e6 });
+        _seedErc20({ _tokenAddress: pair.token1(), _to: pairAddress, _amount: 1e18 });
+        pair.sync();
 
         // Add the default caller to approved swapper list
         _setApprovedSwapperAsWhitelister(pair, address(this));
@@ -180,7 +169,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         int256 _minAnnualizedInterestRate,
         int256 _maxAnnualizedInterestRate
     ) internal {
-        hoax(_pair.getRoleMembers(ADMIN_ROLE)[0]);
+        hoax(_pair.getRoleMembers(ACCESS_CONTROL_ADMIN_ROLE)[0]);
         _pair.setOraclePriceBounds(
             _minBasePrice,
             _maxBasePrice,
@@ -205,7 +194,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         uint256 _minToken1PurchaseFee,
         uint256 _maxToken1PurchaseFee
     ) internal {
-        hoax(_pair.getRoleMembers(ADMIN_ROLE)[0]);
+        hoax(_pair.getRoleMembers(ACCESS_CONTROL_ADMIN_ROLE)[0]);
         _pair.setFeeBounds(_minToken0PurchaseFee, _maxToken0PurchaseFee, _minToken1PurchaseFee, _maxToken1PurchaseFee);
     }
 
@@ -255,7 +244,7 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         address _priceSetterAddress
     ) internal {
         /// BACKGROUND: adminAddress sets minterAddress, pauserAddress, burnerAddress, freezerAddress on the deployed contract
-        address[] memory _adminAddresses = _pair.getRoleMembers(ADMIN_ROLE);
+        address[] memory _adminAddresses = _pair.getRoleMembers(ACCESS_CONTROL_ADMIN_ROLE);
         startHoax(_adminAddresses[0]);
         _pair.assignRole(WHITELISTER_ROLE, _whitelisterAddress, true);
         _pair.assignRole(FEE_SETTER_ROLE, _feeSetterAddress, true);
@@ -278,9 +267,8 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         uint256 _price
     ) internal returns (uint256 _result) {
         string[] memory _inputs = new string[](0)
-            .concat("npx")
-            .concat("ts-node")
-            .concat("src/test/helpers/calculatePrice.ts")
+            .concat("node")
+            .concat("src/test/helpers/calculatePrice.js")
             .concat(_lastUpdated.toString())
             .concat(_currentTimestamp.toString())
             .concat(_perSecondInterestRate.toString())
@@ -346,8 +334,10 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
     //==============================================================================
 
     struct PairStateSnapshot {
+        // General
         AgoraStableSwapPair self;
         address selfAddress;
+        // SwapStorage
         bool isPaused;
         address token0;
         address token1;
@@ -358,15 +348,21 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         uint40 priceLastUpdated;
         int72 perSecondInterestRate; // 18 decimals of precision, given as whole number i.e. 1e16 = 1%
         uint256 basePrice;
+        uint128 token0FeesAccumulated;
+        uint128 token1FeesAccumulated;
+        // ConfigStorage
         uint256 minToken0PurchaseFee; // 18 decimals precision, max value 1
         uint256 maxToken0PurchaseFee; // 18 decimals precision, max value 1
         uint256 minToken1PurchaseFee; // 18 decimals precision, max value 1
         uint256 maxToken1PurchaseFee; // 18 decimals precision, max value 1
         address tokenReceiverAddress;
+        address feeReceiverAddress;
         uint256 minBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
         uint256 maxBasePrice; // 18 decimals precision, max value determined by difference between decimals of token0 and token1
         int256 minAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
         int256 maxAnnualizedInterestRate; // 18 decimals precision, given as number i.e. 1e16 = 1%
+        uint8 token0Decimals;
+        uint8 token1Decimals;
     }
 
     struct DeltaPairStateSnapshot {
@@ -382,8 +378,12 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
     function pairStateSnapshot(address _address) internal view returns (PairStateSnapshot memory _initial) {
         if (_address == address(0)) revert("PairStateSnapshot: address is zero");
         AgoraStableSwapPair _pair = AgoraStableSwapPair(_address);
+
+        // general
         _initial.self = _pair;
         _initial.selfAddress = _address;
+
+        // swapStorage
         _initial.isPaused = _pair.isPaused();
         _initial.token0 = _pair.token0();
         _initial.token1 = _pair.token1();
@@ -394,24 +394,33 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         _initial.priceLastUpdated = _pair.priceLastUpdated().toUint40();
         _initial.perSecondInterestRate = _pair.perSecondInterestRate().toInt72();
         _initial.basePrice = _pair.basePrice();
+        _initial.token0FeesAccumulated = _pair.token0FeesAccumulated().toUint128();
+        _initial.token1FeesAccumulated = _pair.token1FeesAccumulated().toUint128();
+
+        // configStorage
         _initial.minToken0PurchaseFee = _pair.minToken0PurchaseFee();
         _initial.maxToken0PurchaseFee = _pair.maxToken0PurchaseFee();
         _initial.minToken1PurchaseFee = _pair.minToken1PurchaseFee();
         _initial.maxToken1PurchaseFee = _pair.maxToken1PurchaseFee();
         _initial.tokenReceiverAddress = _pair.tokenReceiverAddress();
+        _initial.feeReceiverAddress = _pair.feeReceiverAddress();
         _initial.minBasePrice = _pair.minBasePrice();
         _initial.maxBasePrice = _pair.maxBasePrice();
         _initial.minAnnualizedInterestRate = _pair.minAnnualizedInterestRate();
         _initial.maxAnnualizedInterestRate = _pair.maxAnnualizedInterestRate();
+        _initial.token0Decimals = _pair.token0Decimals();
+        _initial.token1Decimals = _pair.token1Decimals();
     }
 
     function calculateDeltaPairStateSnapshot(
         PairStateSnapshot memory _initial,
         PairStateSnapshot memory _final
     ) internal pure returns (PairStateSnapshot memory _delta) {
+        // general
         _delta.self = _initial.self;
         _delta.selfAddress = _initial.selfAddress == _final.selfAddress ? address(0).toPayable() : _final.selfAddress;
 
+        // swapStorage
         _delta.isPaused = _final.isPaused == _initial.isPaused ? false : true;
         _delta.token0 = _initial.token0 == _final.token0 ? address(0) : _final.token0;
         _delta.token1 = _initial.token1 == _final.token1 ? address(0) : _final.token1;
@@ -425,6 +434,14 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
             .toInt256()
             .toInt72();
         _delta.basePrice = stdMath.delta(_final.basePrice, _initial.basePrice);
+        _delta.token0FeesAccumulated = stdMath
+            .delta(_final.token0FeesAccumulated, _initial.token0FeesAccumulated)
+            .toUint128();
+        _delta.token1FeesAccumulated = stdMath
+            .delta(_final.token1FeesAccumulated, _initial.token1FeesAccumulated)
+            .toUint128();
+
+        // configStorage
         _delta.minToken0PurchaseFee = stdMath.delta(_final.minToken0PurchaseFee, _initial.minToken0PurchaseFee);
         _delta.maxToken0PurchaseFee = stdMath.delta(_final.maxToken0PurchaseFee, _initial.maxToken0PurchaseFee);
         _delta.minToken1PurchaseFee = stdMath.delta(_final.minToken1PurchaseFee, _initial.minToken1PurchaseFee);
@@ -432,6 +449,9 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         _delta.tokenReceiverAddress = _initial.tokenReceiverAddress == _final.tokenReceiverAddress
             ? address(0)
             : _final.tokenReceiverAddress;
+        _delta.feeReceiverAddress = _initial.feeReceiverAddress == _final.feeReceiverAddress
+            ? address(0)
+            : _final.feeReceiverAddress;
         _delta.minBasePrice = stdMath.delta(_final.minBasePrice, _initial.minBasePrice);
         _delta.maxBasePrice = stdMath.delta(_final.maxBasePrice, _initial.maxBasePrice);
         _delta.minAnnualizedInterestRate = stdMath
@@ -440,6 +460,8 @@ contract BaseTest is Test, VmHelper, Constants.Helper {
         _delta.maxAnnualizedInterestRate = stdMath
             .delta(_final.maxAnnualizedInterestRate, _initial.maxAnnualizedInterestRate)
             .toInt256();
+        _delta.token0Decimals = _initial.token0Decimals == _final.token0Decimals ? 0 : _final.token0Decimals;
+        _delta.token1Decimals = _initial.token1Decimals == _final.token1Decimals ? 0 : _final.token1Decimals;
     }
 
     function deltaPairStateAccountingSnapshot(

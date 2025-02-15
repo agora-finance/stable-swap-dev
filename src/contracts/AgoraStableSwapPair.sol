@@ -109,7 +109,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         });
 
         // assign roles to deployer for initialization
-        _assignRole({ _role: ADMIN_ROLE, _newAddress: msg.sender, _addRole: true });
+        _assignRole({ _role: ACCESS_CONTROL_ADMIN_ROLE, _newAddress: msg.sender, _addRole: true });
         _assignRole({ _role: PRICE_SETTER_ROLE, _newAddress: msg.sender, _addRole: true });
         _assignRole({ _role: FEE_SETTER_ROLE, _newAddress: msg.sender, _addRole: true });
 
@@ -148,7 +148,7 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         });
 
         // Remove privileges from deployer
-        _assignRole({ _role: ADMIN_ROLE, _newAddress: msg.sender, _addRole: false });
+        _assignRole({ _role: ACCESS_CONTROL_ADMIN_ROLE, _newAddress: msg.sender, _addRole: false });
         _assignRole({ _role: PRICE_SETTER_ROLE, _newAddress: msg.sender, _addRole: false });
         _assignRole({ _role: FEE_SETTER_ROLE, _newAddress: msg.sender, _addRole: false });
     }
@@ -306,11 +306,11 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @param _path The path of the tokens
     /// @return _amounts The amount of returned output tokenOut
     function getAmountsOut(uint256 _amountIn, address[] memory _path) public view returns (uint256[] memory _amounts) {
-        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
+        SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
-        requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+        requireValidPath({ _path: _path, _token0: _swapStorage.token0, _token1: _swapStorage.token1 });
 
         // Checks: amountIn is greater than 0
         if (_amountIn == 0) revert InsufficientInputAmount();
@@ -320,18 +320,20 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         _amounts[0] = _amountIn;
 
         // path[1] represents our tokenOut
-        if (_path[1] == _storage.token0) {
+        if (_path[1] == _swapStorage.token0) {
             (_amounts[1], ) = getAmount0Out({
                 _amount1In: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
-                _token0PurchaseFee: _storage.token0PurchaseFee
+                _token0PurchaseFee: _swapStorage.token0PurchaseFee
             });
+            if (_amounts[1] > _swapStorage.reserve0) revert InsufficientLiquidity();
         } else {
             (_amounts[1], ) = getAmount1Out({
                 _amount0In: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
-                _token1PurchaseFee: _storage.token1PurchaseFee
+                _token1PurchaseFee: _swapStorage.token1PurchaseFee
             });
+            if (_amounts[1] > _swapStorage.reserve1) revert InsufficientLiquidity();
         }
     }
 
@@ -340,11 +342,13 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @param _path The path of the tokens
     /// @return _amounts The amount of required input tokenIn
     function getAmountsIn(uint256 _amountOut, address[] memory _path) public view returns (uint256[] memory _amounts) {
-        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
+        SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
-        requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+        requireValidPath({ _path: _path, _token0: _swapStorage.token0, _token1: _swapStorage.token1 });
+        if (_path[1] == _swapStorage.token0 && _amountOut > _swapStorage.reserve0) revert InsufficientLiquidity();
+        if (_path[1] == _swapStorage.token1 && _amountOut > _swapStorage.reserve1) revert InsufficientLiquidity();
 
         // Checks: amountOut is greater than 0
         if (_amountOut == 0) revert InsufficientOutputAmount();
@@ -355,17 +359,17 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         _amounts[1] = _amountOut;
 
         // path[0] represents our tokenIn
-        if (_path[0] == _storage.token0) {
+        if (_path[0] == _swapStorage.token0) {
             (_amounts[0], ) = getAmount0In({
                 _amount1Out: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
-                _token1PurchaseFee: _storage.token1PurchaseFee
+                _token1PurchaseFee: _swapStorage.token1PurchaseFee
             });
         } else {
             (_amounts[0], ) = getAmount1In({
                 _amount0Out: _amountOut,
                 _token0OverToken1Price: _token0OverToken1Price,
-                _token0PurchaseFee: _storage.token0PurchaseFee
+                _token0PurchaseFee: _swapStorage.token0PurchaseFee
             });
         }
     }
@@ -390,6 +394,6 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @notice The ```version``` function returns the version of the AgoraStableSwapPair
     /// @return _version The version of the AgoraStableSwapPair
     function version() external pure returns (Version memory _version) {
-        _version = Version({ major: 1, minor: 0, patch: 0 });
+        _version = Version({ major: 0, minor: 1, patch: 0 });
     }
 }

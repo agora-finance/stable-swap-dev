@@ -32,6 +32,19 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     //==============================================================================
     // Storage Structs
     //==============================================================================
+    /// @notice The ```ConfigStorage``` struct is used to store the configuration of the AgoraStableSwapPair
+    /// @param minToken0PurchaseFee The minimum purchase fee for token0, 18 decimals precision, max value 1
+    /// @param maxToken0PurchaseFee The maximum purchase fee for token0, 18 decimals precision, max value 1
+    /// @param minToken1PurchaseFee The minimum purchase fee for token1, 18 decimals precision, max value 1
+    /// @param maxToken1PurchaseFee The maximum purchase fee for token1, 18 decimals precision, max value 1
+    /// @param tokenReceiverAddress The address of the token receiver
+    /// @param feeReceiverAddress The address of the fee receiver
+    /// @param minBasePrice The minimum base price for the pair, 18 decimals precision, min/max value determined by difference between decimals of token0 and token1
+    /// @param maxBasePrice The maximum base price for the pair, 18 decimals precision, min/max value determined by difference between decimals of token0 and token1
+    /// @param minAnnualizedInterestRate The minimum annualized interest rate for the pair, 18 decimals precision, given as number i.e. 1e16 = 1%
+    /// @param maxAnnualizedInterestRate The maximum annualized interest rate for the pair, 18 decimals precision, given as number i.e. 1e16 = 1%
+    /// @param token0Decimals The number of decimals for token0
+    /// @param token1Decimals The number of decimals for token1
     struct ConfigStorage {
         uint256 minToken0PurchaseFee; // 18 decimals precision, max value 1
         uint256 maxToken0PurchaseFee; // 18 decimals precision, max value 1
@@ -47,6 +60,19 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint8 token1Decimals;
     }
 
+    /// @notice The ```SwapStorage``` struct is used to store the state of the AgoraStableSwapPair
+    /// @param isPaused The boolean value indicating whether the pair is paused
+    /// @param token0 The address of token0
+    /// @param token1 The address of token1
+    /// @param reserve0 The reserve of token0, given as raw value
+    /// @param reserve1 The reserve of token1, given as raw value
+    /// @param token0PurchaseFee The purchase fee for token0, 18 decimals precision, max value 1
+    /// @param token1PurchaseFee The purchase fee for token1, 18 decimals precision, max value 1
+    /// @param priceLastUpdated The last block timestamp when the price was updated
+    /// @param perSecondInterestRate The per second interest rate for the pair, 18 decimals precision, given as whole number with 18 decimals of precision i.e. 1e16 = 1%
+    /// @param basePrice The base price for the pair, 18 decimals precision, limited by token0 and token1 decimals
+    /// @param token0FeesAccumulated The accumulated fees for token0, given as raw value
+    /// @param token1FeesAccumulated The accumulated fees for token1, given as raw value
     struct SwapStorage {
         bool isPaused;
         address token0;
@@ -62,21 +88,9 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint128 token1FeesAccumulated;
     }
 
-    /// @notice The AgoraStableSwapStorage struct is used to store the state of the AgoraStableSwapPair contract
-    /// @param isPaused The boolean value indicating whether the pair is paused
-    /// @param token0 The address of token0
-    /// @param token1 The address of token1
-    /// @param token0PurchaseFee The purchase fee for token0
-    /// @param minToken0PurchaseFee The minimum purchase fee for token0
-    /// @param maxToken0PurchaseFee The maximum purchase fee for token0
-    /// @param token1PurchaseFee The purchase fee for token1
-    /// @param minToken1PurchaseFee The minimum purchase fee for token1
-    /// @param maxToken1PurchaseFee The maximum purchase fee for token1
-    /// @param oracleAddress The address of the oracle
-    /// @param reserve0 The reserve of token0
-    /// @param reserve1 The reserve of token1
-    /// @param lastBlock The last block number
-    /// @param tokenReceiverAddress The address of the token receiver
+    /// @notice The ```AgoraStableSwapStorage``` struct is used to store the state of the AgoraStableSwapPair contract
+    /// @param swapStorage The swap storage struct, values used during call to swap()
+    /// @param configStorage The config storage struct, values used outside of swap()
     struct AgoraStableSwapStorage {
         SwapStorage swapStorage;
         ConfigStorage configStorage;
@@ -100,7 +114,9 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         }
     }
 
+    /// @notice The ```PRICE_PRECISION``` constant is the precision for the price, 18 decimals precision
     uint256 public constant PRICE_PRECISION = 1e18;
+    /// @notice The ```FEE_PRECISION``` constant is the precision for the fees, 18 decimals precision
     uint256 public constant FEE_PRECISION = 1e18;
 
     //==============================================================================
@@ -122,9 +138,10 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
     /// @notice The ```getAmount0In``` function calculates the amount of input token0In required for a given amount token1Out
     /// @param _amount1Out The amount of output token1
-    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
-    /// @param _token1PurchaseFee The purchase fee for the token0
+    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1 with 18 decimals of precision
+    /// @param _token1PurchaseFee The purchase fee for the token0, given as a percentage with 18 decimals of precision i.e. 1e16 = 1%
     /// @return _amount0In The amount of input token0
+    /// @return _token1PurchaseFeeAmount The amount of accumulated fees for the purchase of token1
     function getAmount0In(
         uint256 _amount1Out,
         uint256 _token0OverToken1Price,
@@ -145,70 +162,73 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
     /// @notice The ```getAmount1In``` function calculates the amount of input token1In required for a given amount token0Out
     /// @param _amount0Out The amount of output token0
-    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
-    /// @param _token0PurchaseFee The purchase fee for the token1
+    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1 with 18 decimals of precision
+    /// @param _token0PurchaseFee The purchase fee for the token1, given as a percentage with 18 decimals of precision i.e. 1e16 = 1%
     /// @return _amount1In The amount of input token1
+    /// @return _token0FeeAmount The amount of purchase fees for the token0
     function getAmount1In(
         uint256 _amount0Out,
         uint256 _token0OverToken1Price,
         uint256 _token0PurchaseFee
-    ) public pure returns (uint256 _amount1In, uint256 _token0FeesAmount) {
-        _token0FeesAmount = (_amount0Out * _token0PurchaseFee) / FEE_PRECISION;
+    ) public pure returns (uint256 _amount1In, uint256 _token0FeeAmount) {
+        _token0FeeAmount = (_amount0Out * _token0PurchaseFee) / FEE_PRECISION;
 
         // Always round up the fee
-        if (_token0FeesAmount * FEE_PRECISION < _amount0Out * _token0PurchaseFee) _token0FeesAmount += 1;
+        if (_token0FeeAmount * FEE_PRECISION < _amount0Out * _token0PurchaseFee) _token0FeeAmount += 1;
 
-        _amount1In = ((_amount0Out + _token0FeesAmount) * PRICE_PRECISION) / _token0OverToken1Price;
+        _amount1In = ((_amount0Out + _token0FeeAmount) * PRICE_PRECISION) / _token0OverToken1Price;
 
         // Always round up the amount going into the contract
-        if (_amount1In * _token0OverToken1Price < (_amount0Out + _token0FeesAmount) * PRICE_PRECISION) _amount1In += 1;
+        if (_amount1In * _token0OverToken1Price < (_amount0Out + _token0FeeAmount) * PRICE_PRECISION) _amount1In += 1;
     }
 
     /// @notice The ```getAmount0Out``` function calculates the amount of output token0Out returned from a given amount of input token1In
     /// @param _amount1In The amount of input token1
-    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
-    /// @param _token0PurchaseFee The purchase fee for the token0
+    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1 with 18 decimals of precision
+    /// @param _token0PurchaseFee The purchase fee for the token0, given as a percentage with 18 decimals of precision i.e. 1e16 = 1%
     /// @return _amount0Out The amount of output token0
+    /// @return _token0PurchaseFeeAmount The amount of purchase fees for the token0
     function getAmount0Out(
         uint256 _amount1In,
         uint256 _token0OverToken1Price,
         uint256 _token0PurchaseFee
-    ) public pure returns (uint256 _amount0Out, uint256 _token0PurchaseFeesAmount) {
+    ) public pure returns (uint256 _amount0Out, uint256 _token0PurchaseFeeAmount) {
         // NOTE:  price and fee must be chosen such that we dont get an overflow during the multiplication here
-        _token0PurchaseFeesAmount =
+        _token0PurchaseFeeAmount =
             (_amount1In * _token0OverToken1Price * _token0PurchaseFee) /
             (FEE_PRECISION * PRICE_PRECISION);
 
         // Always round up the fee
         if (
-            _token0PurchaseFeesAmount * FEE_PRECISION * PRICE_PRECISION <
+            _token0PurchaseFeeAmount * FEE_PRECISION * PRICE_PRECISION <
             _amount1In * _token0OverToken1Price * _token0PurchaseFee
-        ) _token0PurchaseFeesAmount += 1;
+        ) _token0PurchaseFeeAmount += 1;
 
-        _amount0Out = ((_amount1In * _token0OverToken1Price) / PRICE_PRECISION) - _token0PurchaseFeesAmount;
+        _amount0Out = ((_amount1In * _token0OverToken1Price) / PRICE_PRECISION) - _token0PurchaseFeeAmount;
     }
 
     /// @notice The ```getAmount1Out``` function calculates the amount of output token1Out returned from a given amount of input token0In
     /// @param _amount0In The amount of input token0
-    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1
-    /// @param _token1PurchaseFee The purchase fee for the token1
+    /// @param _token0OverToken1Price The price of the pair expressed as token0 over token1 with 18 decimals of precision
+    /// @param _token1PurchaseFee The purchase fee for the token1, given as a percentage with 18 decimals of precision i.e. 1e16 = 1%
     /// @return _amount1Out The amount of output token1
+    /// @return _token1PurchaseFeeAmount The amount of purchase fees for the token1
     function getAmount1Out(
         uint256 _amount0In,
         uint256 _token0OverToken1Price,
         uint256 _token1PurchaseFee
-    ) public pure returns (uint256 _amount1Out, uint256 _token1PurchaseFeesAmount) {
-        _token1PurchaseFeesAmount =
+    ) public pure returns (uint256 _amount1Out, uint256 _token1PurchaseFeeAmount) {
+        _token1PurchaseFeeAmount =
             (_amount0In * PRICE_PRECISION * _token1PurchaseFee) /
             (FEE_PRECISION * _token0OverToken1Price);
 
         // Always round up the fee
         if (
-            _token1PurchaseFeesAmount * FEE_PRECISION * _token0OverToken1Price <
+            _token1PurchaseFeeAmount * FEE_PRECISION * _token0OverToken1Price <
             _amount0In * PRICE_PRECISION * _token1PurchaseFee
-        ) _token1PurchaseFeesAmount += 1;
+        ) _token1PurchaseFeeAmount += 1;
 
-        _amount1Out = ((_amount0In * PRICE_PRECISION) / _token0OverToken1Price) - _token1PurchaseFeesAmount;
+        _amount1Out = ((_amount0In * PRICE_PRECISION) / _token0OverToken1Price) - _token1PurchaseFeeAmount;
     }
 
     //==============================================================================
@@ -230,18 +250,18 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         }
 
         // Cache information about the pair for gas savings
-        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
+        SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
-        //Checks: ensure pair not paused
-        if (_storage.isPaused) revert PairIsPaused();
+        // Checks: ensure pair not paused
+        if (_swapStorage.isPaused) revert PairIsPaused();
 
         // Checks: proper liquidity available, NOTE: we allow emptying the pair
-        if (_amount0Out > _storage.reserve0 || _amount1Out > _storage.reserve1) revert InsufficientLiquidity();
+        if (_amount0Out > _swapStorage.reserve0 || _amount1Out > _swapStorage.reserve1) revert InsufficientLiquidity();
 
         // Send the tokens (you can only send 1)
-        if (_amount0Out > 0) IERC20(_storage.token0).safeTransfer({ to: _to, value: _amount0Out });
-        else IERC20(_storage.token1).safeTransfer({ to: _to, value: _amount1Out });
+        if (_amount0Out > 0) IERC20(_swapStorage.token0).safeTransfer({ to: _to, value: _amount0Out });
+        else IERC20(_swapStorage.token1).safeTransfer({ to: _to, value: _amount1Out });
 
         // Execute the callback (if relevant)
         if (_data.length > 0) {
@@ -254,15 +274,15 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         }
 
         // Take snapshot of balances
-        uint256 _finalToken0Balance = IERC20(_storage.token0).balanceOf({ account: address(this) });
-        uint256 _finalToken1Balance = IERC20(_storage.token1).balanceOf({ account: address(this) });
+        uint256 _finalToken0Balance = IERC20(_swapStorage.token0).balanceOf({ account: address(this) });
+        uint256 _finalToken1Balance = IERC20(_swapStorage.token1).balanceOf({ account: address(this) });
 
         // Calculate how many tokens were transferred
-        uint256 _token0In = _finalToken0Balance > _storage.reserve0 - _amount0Out
-            ? _finalToken0Balance - (_storage.reserve0 - _amount0Out)
+        uint256 _token0In = _finalToken0Balance > _swapStorage.reserve0 - _amount0Out
+            ? _finalToken0Balance - (_swapStorage.reserve0 - _amount0Out)
             : 0;
-        uint256 _token1In = _finalToken1Balance > _storage.reserve1 - _amount1Out
-            ? _finalToken1Balance - (_storage.reserve1 - _amount1Out)
+        uint256 _token1In = _finalToken1Balance > _swapStorage.reserve1 - _amount1Out
+            ? _finalToken1Balance - (_swapStorage.reserve1 - _amount1Out)
             : 0;
 
         {
@@ -270,14 +290,14 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
             uint256 _token0FeesAmount;
             uint256 _token1FeesAmount;
 
-            // Checks:: Final invariant, ensure that we received the correct amount of tokens
+            // Checks: Final invariant, ensure that we received the correct amount of tokens
             if (_amount0Out > 0) {
                 // we are sending token0 out, receiving token1 In
                 uint256 _expectedAmount1In;
                 (_expectedAmount1In, _token0FeesAmount) = getAmount1In(
                     _amount0Out,
                     _token0OverToken1Price,
-                    _storage.token0PurchaseFee
+                    _swapStorage.token0PurchaseFee
                 );
                 if (_expectedAmount1In > _token1In) revert InsufficientInputAmount();
             } else {
@@ -286,23 +306,25 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
                 (_expectedAmount0In, _token1FeesAmount) = getAmount0In(
                     _amount1Out,
                     _token0OverToken1Price,
-                    _storage.token1PurchaseFee
+                    _swapStorage.token1PurchaseFee
                 );
                 if (_expectedAmount0In > _token0In) revert InsufficientInputAmount();
             }
 
+            // emit event
             emit SwapFees({ token0FeesAccumulated: _token0FeesAmount, token1FeesAccumulated: _token1FeesAmount });
 
             // Calculate new fees + reserves in memory struct
-            _storage.token0FeesAccumulated += _token0FeesAmount.toUint128();
-            _storage.token1FeesAccumulated += _token1FeesAmount.toUint128();
-            _storage.reserve0 = (_finalToken0Balance - _storage.token0FeesAccumulated).toUint112();
-            _storage.reserve1 = (_finalToken1Balance - _storage.token1FeesAccumulated).toUint112();
+            _swapStorage.token0FeesAccumulated += _token0FeesAmount.toUint128();
+            _swapStorage.token1FeesAccumulated += _token1FeesAmount.toUint128();
+            _swapStorage.reserve0 = (_finalToken0Balance - _swapStorage.token0FeesAccumulated).toUint112();
+            _swapStorage.reserve1 = (_finalToken1Balance - _swapStorage.token1FeesAccumulated).toUint112();
         }
 
         // Effects: update storage
-        _getPointerToStorage().swapStorage = _storage;
-        emit Sync({ reserve0: _storage.reserve0, reserve1: _storage.reserve1 });
+        _getPointerToStorage().swapStorage = _swapStorage;
+        // emit event
+        emit Sync({ reserve0: _swapStorage.reserve0, reserve1: _swapStorage.reserve1 });
 
         // emit event
         emit Swap({
@@ -333,23 +355,23 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
         address _tokenIn = _path[0];
         address _tokenOut = _path[1];
-        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
+        SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
-        requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+        requireValidPath({ _path: _path, _token0: _swapStorage.token0, _token1: _swapStorage.token1 });
 
         // Calculations: determine amounts based on path
-        (uint256 _amountOut, ) = _tokenOut == _storage.token0
+        (uint256 _amountOut, ) = _tokenOut == _swapStorage.token0
             ? getAmount0Out({
                 _amount1In: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
-                _token0PurchaseFee: _storage.token0PurchaseFee
+                _token0PurchaseFee: _swapStorage.token0PurchaseFee
             })
             : getAmount1Out({
                 _amount0In: _amountIn,
                 _token0OverToken1Price: _token0OverToken1Price,
-                _token1PurchaseFee: _storage.token1PurchaseFee
+                _token1PurchaseFee: _swapStorage.token1PurchaseFee
             });
 
         // Checks: amountOut must not be smaller than the amountOutMin
@@ -359,7 +381,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         IERC20(_tokenIn).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
 
         // Effects: swap tokens
-        if (_tokenOut == _storage.token0) {
+        if (_tokenOut == _swapStorage.token0) {
             swap({ _amount0Out: _amountOut, _amount1Out: 0, _to: _to, _data: new bytes(0) });
         } else {
             swap({ _amount0Out: 0, _amount1Out: _amountOut, _to: _to, _data: new bytes(0) });
@@ -388,16 +410,24 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
 
         address _tokenIn = _path[0];
         address _tokenOut = _path[1];
-        SwapStorage memory _storage = _getPointerToStorage().swapStorage;
+        SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         uint256 _token0OverToken1Price = getPrice();
 
         // Checks: path length is 2 && path must contain token0 and token1 only
-        requireValidPath({ _path: _path, _token0: _storage.token0, _token1: _storage.token1 });
+        requireValidPath({ _path: _path, _token0: _swapStorage.token0, _token1: _swapStorage.token1 });
 
         // Calculations: determine amounts based on path
-        (uint256 _amountIn, ) = _tokenIn == _storage.token0
-            ? getAmount0In(_amountOut, _token0OverToken1Price, _storage.token1PurchaseFee)
-            : getAmount1In(_amountOut, _token0OverToken1Price, _storage.token0PurchaseFee);
+        (uint256 _amountIn, ) = _tokenIn == _swapStorage.token0
+            ? getAmount0In({
+                _amount1Out: _amountOut,
+                _token0OverToken1Price: _token0OverToken1Price,
+                _token1PurchaseFee: _swapStorage.token1PurchaseFee
+            })
+            : getAmount1In({
+                _amount0Out: _amountOut,
+                _token0OverToken1Price: _token0OverToken1Price,
+                _token0PurchaseFee: _swapStorage.token0PurchaseFee
+            });
         // Checks: amountInMax must be larger or equal to than the amountIn
         if (_amountIn > _amountInMax) revert ExcessiveInputAmount();
 
@@ -405,7 +435,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         IERC20(_tokenIn).safeTransferFrom({ from: msg.sender, to: address(this), value: _amountIn });
 
         // Effects: swap tokens
-        if (_tokenOut == _storage.token0) {
+        if (_tokenOut == _swapStorage.token0) {
             swap({ _amount0Out: _amountOut, _amount1Out: 0, _to: _to, _data: new bytes(0) });
         } else {
             swap({ _amount0Out: 0, _amount1Out: _amountOut, _to: _to, _data: new bytes(0) });
@@ -426,6 +456,7 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
             _token0FeesAccumulated: _storage.token0FeesAccumulated,
             _token1FeesAccumulated: _storage.token1FeesAccumulated
         });
+        // emit event
         emit Sync({ reserve0: _storage.reserve0, reserve1: _storage.reserve1 });
     }
 
@@ -523,6 +554,9 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
         uint256 maxToken1PurchaseFee
     );
 
+    /// @notice The ```SetTokenPurchaseFees``` event is emitted when the token purchase fees are set
+    /// @param token0PurchaseFee The purchase fee for token0
+    /// @param token1PurchaseFee The purchase fee for token1
     event SetTokenPurchaseFees(uint256 token0PurchaseFee, uint256 token1PurchaseFee);
 
     /// @notice The ```RemoveTokens``` event is emitted when tokens are removed
