@@ -50,14 +50,15 @@ contract TestSetFees is BaseTest {
         });
 
         /// GIVEN: token0PurchaseFee is 1e16 (0.01)
-        hoax(feeSetterAddress);
-        pair.setTokenPurchaseFees(1e16, pair.token1PurchaseFee());
+        _setFeesAsFeeSetter({ _pair: pair, _token0PurchaseFee: 1e16, _token1PurchaseFee: pair.token1PurchaseFee() });
 
         assertTrue({ err: "/// GIVEN: token0PurchaseFee is 1e16 (0.01)", data: pair.token0PurchaseFee() == 1e16 });
 
         /// WHEN: unpriviledged caller calls setToken0Fee with _fee = 5e16 (0.05)
+        uint256 _token0PurchaseFee = 5e16;
+        uint256 _token1PurchaseFee = pair.token1PurchaseFee();
         vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, FEE_SETTER_ROLE));
-        pair.setTokenPurchaseFees(5e16, pair.token1PurchaseFee());
+        pair.setTokenPurchaseFees(_token0PurchaseFee, _token1PurchaseFee);
         /// THEN: call reverts and fee remains unchanged
     }
 
@@ -74,8 +75,10 @@ contract TestSetFees is BaseTest {
         });
 
         /// WHEN: privileged caller calls setToken1Fee with _fee = 1e16 (0.01)
+        uint256 _token0PurchaseFee = pair.token0PurchaseFee();
+        uint256 _token1PurchaseFee = 1e16;
         hoax(feeSetterAddress);
-        pair.setTokenPurchaseFees(pair.token0PurchaseFee(), 1e16);
+        pair.setTokenPurchaseFees(_token0PurchaseFee, _token1PurchaseFee);
 
         assertTrue({
             err: "/// THEN: token1PurchaseFee is set to 1e16 (0.01)",
@@ -84,8 +87,6 @@ contract TestSetFees is BaseTest {
     }
 
     function test_CannotSetToken1FeesIfNotFeeSetter() public {
-        /// GIVEN: token1PurchaseFee is 1e16 (0.01)
-
         /// WHEN: privileged caller calls setFeeBounds for token1 [0 - 0.02]
         _setFeeBoundsAsAdmin({
             _pair: pair,
@@ -95,14 +96,17 @@ contract TestSetFees is BaseTest {
             _maxToken1PurchaseFee: 2e16 // 0.02
         });
 
-        hoax(feeSetterAddress);
-        pair.setTokenPurchaseFees(pair.token0PurchaseFee(), 1e16);
+        /// GIVEN: token1PurchaseFee is 1e16 (0.01)
+        _setFeesAsFeeSetter({ _pair: pair, _token0PurchaseFee: pair.token0PurchaseFee(), _token1PurchaseFee: 1e16 });
+
         assertTrue({ err: "/// GIVEN: token1PurchaseFee is 1e16 (0.01)", data: pair.token1PurchaseFee() == 1e16 });
 
         /// THEN: call reverts and fee remains unchanged
+        uint256 _token0PurchaseFee = pair.token0PurchaseFee();
+        uint256 _token1PurchaseFee = 5e16;
         vm.expectRevert(abi.encodeWithSelector(AgoraAccessControl.AddressIsNotRole.selector, FEE_SETTER_ROLE));
         /// WHEN: unpriviledged caller calls setToken1Fee with _fee = 5e16 (0.05)
-        pair.setTokenPurchaseFees(pair.token0PurchaseFee(), 5e16);
+        pair.setTokenPurchaseFees(_token0PurchaseFee, _token1PurchaseFee);
 
         assertTrue({ err: "/// THEN: fee remains unchanged", data: pair.token1PurchaseFee() == 1e16 });
     }
@@ -124,10 +128,12 @@ contract TestSetFees is BaseTest {
         });
 
         /// THEN: call reverts because of out of bounds fee
+        uint256 _token0PurchaseFee = 1e16;
+        uint256 _token1PurchaseFee = pair.token1PurchaseFee();
         vm.expectRevert(abi.encodeWithSelector(AgoraStableSwapPairCore.InvalidToken0PurchaseFee.selector));
         /// WHEN: privileged caller calls setToken0Fee with _fee = 1e16 0.01
         hoax(feeSetterAddress);
-        pair.setTokenPurchaseFees(1e16, pair.token1PurchaseFee());
+        pair.setTokenPurchaseFees(_token0PurchaseFee, _token1PurchaseFee);
     }
 
     function test_CannotSetInvalidToken1PurchaseFee() public {
@@ -143,9 +149,11 @@ contract TestSetFees is BaseTest {
         });
 
         /// THEN: call reverts because of out of bounds fee
+        uint256 _token0PurchaseFee = pair.token0PurchaseFee();
+        uint256 _token1PurchaseFee = 1e16;
         vm.expectRevert(abi.encodeWithSelector(AgoraStableSwapPairCore.InvalidToken1PurchaseFee.selector));
         /// WHEN: privileged caller calls setToken1Fee with _fee = 1e16 0.01
         hoax(feeSetterAddress);
-        pair.setTokenPurchaseFees(pair.token0PurchaseFee(), 1e16);
+        pair.setTokenPurchaseFees(_token0PurchaseFee, _token1PurchaseFee);
     }
 }
