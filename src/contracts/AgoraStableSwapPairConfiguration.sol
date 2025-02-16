@@ -22,7 +22,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @title AgoraStableSwapPairConfiguration
 /// @notice The AgoraStableSwapPairConfiguration is a contract that manages the privileged configuration setters for the AgoraStableSwapPair
 /// @author Agora
-contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
+abstract contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     using SafeCast for *;
     using SafeERC20 for IERC20;
 
@@ -35,7 +35,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _tokenReceiver The address of the token receiver
     function setTokenReceiver(address _tokenReceiver) public {
         // Checks: Only the admin can set the token receiver
-        _requireIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE, _address: msg.sender });
+        _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
 
         // Effects: Set the token receiver
         _getPointerToStorage().configStorage.tokenReceiverAddress = _tokenReceiver;
@@ -49,7 +49,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _feeReceiver The address of the fee receiver
     function setFeeReceiver(address _feeReceiver) public {
         // Checks: Only the admin can set the fee receiver
-        _requireIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE, _address: msg.sender });
+        _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
 
         // Effects: Set the fee receiver
         _getPointerToStorage().configStorage.feeReceiverAddress = _feeReceiver;
@@ -64,7 +64,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _setApproved The boolean value indicating whether the swappers are approved
     function setApprovedSwappers(address[] memory _approvedSwappers, bool _setApproved) public {
         // Checks: Only the whitelister can set the approved swapper
-        _requireIsRole({ _role: WHITELISTER_ROLE, _address: msg.sender });
+        _requireSenderIsRole({ _role: WHITELISTER_ROLE });
 
         for (uint256 _i = 0; _i < _approvedSwappers.length; _i++) {
             // Effects: Set the isApproved state
@@ -90,6 +90,10 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         // Checks: Only the admin can set the fee bounds
         _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
 
+        // Checks: Ensure the params are valid
+        if (_minToken0PurchaseFee > _maxToken0PurchaseFee) revert MinToken0PurchaseFeeGreaterThanMax();
+        if (_minToken1PurchaseFee > _maxToken1PurchaseFee) revert MinToken1PurchaseFeeGreaterThanMax();
+
         // Effects: Set the fee bounds
         _getPointerToStorage().configStorage.minToken0PurchaseFee = _minToken0PurchaseFee;
         _getPointerToStorage().configStorage.maxToken0PurchaseFee = _maxToken0PurchaseFee;
@@ -111,7 +115,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _token1PurchaseFee The purchase fee for token1
     function setTokenPurchaseFees(uint256 _token0PurchaseFee, uint256 _token1PurchaseFee) public {
         // Checks: Only the fee setter can set the fee
-        _requireIsRole({ _role: FEE_SETTER_ROLE, _address: msg.sender });
+        _requireSenderIsRole({ _role: FEE_SETTER_ROLE });
 
         // Checks: Ensure the params are valid and within the bounds
         if (
@@ -137,7 +141,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _amount The amount of tokens to remove
     function removeTokens(address _tokenAddress, uint256 _amount) external {
         // Checks: Only the token remover can remove tokens
-        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
+        _requireSenderIsRole({ _role: TOKEN_REMOVER_ROLE });
 
         SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
@@ -174,7 +178,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _amount The amount of tokens to remove
     function collectFees(address _tokenAddress, uint256 _amount) external {
         // Checks: Only the tokenRemover can remove tokens
-        _requireIsRole({ _role: TOKEN_REMOVER_ROLE, _address: msg.sender });
+        _requireSenderIsRole({ _role: TOKEN_REMOVER_ROLE });
 
         SwapStorage memory _swapStorage = _getPointerToStorage().swapStorage;
         ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
@@ -217,7 +221,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _setPaused The boolean value indicating whether the pair is paused
     function setPaused(bool _setPaused) public {
         // Checks: Only the pauser can pause the pair
-        _requireIsRole({ _role: PAUSER_ROLE, _address: msg.sender });
+        _requireSenderIsRole({ _role: PAUSER_ROLE });
 
         // Effects: Set the isPaused state
         _getPointerToStorage().swapStorage.isPaused = _setPaused;
@@ -238,6 +242,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         int256 _minAnnualizedInterestRate,
         int256 _maxAnnualizedInterestRate
     ) public {
+        // Checks: Only the admin can set the price bounds
         _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
         // Checks: parameters are valid
         if (_minBasePrice > _maxBasePrice) revert MinBasePriceGreaterThanMaxBasePrice();
@@ -263,6 +268,7 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     /// @param _basePrice The base price of the pair
     /// @param _annualizedInterestRate The annualized interest rate
     function configureOraclePrice(uint256 _basePrice, int256 _annualizedInterestRate) public {
+        // Checks: Only the price setter can configure the price
         _requireSenderIsRole({ _role: PRICE_SETTER_ROLE });
 
         ConfigStorage memory _configStorage = _getPointerToStorage().configStorage;
