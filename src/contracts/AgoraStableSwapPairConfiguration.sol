@@ -22,7 +22,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @title AgoraStableSwapPairConfiguration
 /// @notice The AgoraStableSwapPairConfiguration is a contract that manages the privileged configuration setters for the AgoraStableSwapPair
 /// @author Agora
-contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
+abstract contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     using SafeCast for *;
     using SafeERC20 for IERC20;
 

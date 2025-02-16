@@ -17,7 +17,7 @@ import { AgoraAccessControl } from "agora-contracts/access-control/AgoraAccessCo
 /// @title AgoraStableSwapAccessControl
 /// @notice The AgoraStableSwapAccessControl is a contract that manages the access control for the AgoraStableSwapPair
 /// @author Agora
-contract AgoraStableSwapAccessControl is AgoraAccessControl {
+abstract contract AgoraStableSwapAccessControl is AgoraAccessControl {
     /// @notice the WHITELISTER_ROLE identifier
     string public constant WHITELISTER_ROLE = "WHITELISTER_ROLE";
 

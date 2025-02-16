@@ -25,7 +25,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @title AgoraStableSwapPairCore
 /// @notice The AgoraStableSwapPairCore is a contract that manages the core logic for the AgoraStableSwapPair
 /// @author Agora
-contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable, ReentrancyGuardTransient {
+abstract contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
