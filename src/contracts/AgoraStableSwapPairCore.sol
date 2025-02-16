@@ -667,6 +667,12 @@ contract AgoraStableSwapPairCore is AgoraStableSwapAccessControl, Initializable,
     /// @notice Emitted when the min annualized interest rate is greater than the max annualized interest rate
     error MinAnnualizedInterestRateGreaterThanMax();
 
+    /// @notice Emitted when the min token0 purchase fee is greater than the max token0 purchase fee
+    error MinToken0PurchaseFeeGreaterThanMax();
+
+    /// @notice Emitted when the min token1 purchase fee is greater than the max token1 purchase fee
+    error MinToken1PurchaseFeeGreaterThanMax();
+
     /// @notice Emitted when there are insufficient tokens available for withrawal
     error InsufficientTokens();
 

@@ -90,6 +90,10 @@ contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         // Checks: Only the admin can set the fee bounds
         _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
 
+        // Checks: Ensure the params are valid
+        if (_minToken0PurchaseFee > _maxToken0PurchaseFee) revert MinToken0PurchaseFeeGreaterThanMax();
+        if (_minToken1PurchaseFee > _maxToken1PurchaseFee) revert MinToken1PurchaseFeeGreaterThanMax();
+
         // Effects: Set the fee bounds
         _getPointerToStorage().configStorage.minToken0PurchaseFee = _minToken0PurchaseFee;
         _getPointerToStorage().configStorage.maxToken0PurchaseFee = _maxToken0PurchaseFee;
