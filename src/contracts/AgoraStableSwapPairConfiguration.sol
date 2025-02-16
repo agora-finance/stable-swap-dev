@@ -15,7 +15,6 @@ pragma solidity ^0.8.28;
 import { AgoraStableSwapPairCore } from "./AgoraStableSwapPairCore.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -31,10 +30,10 @@ abstract contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     //==============================================================================
 
     /// @notice The ```setTokenReceiver``` function sets the token receiver
-    /// @dev Only the admin can set the token receiver
+    /// @dev Only the access control admin can set the token receiver
     /// @param _tokenReceiver The address of the token receiver
     function setTokenReceiver(address _tokenReceiver) public {
-        // Checks: Only the admin can set the token receiver
+        // Checks: Only the access control admin can set the token receiver
         _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
 
         // Effects: Set the token receiver
@@ -45,10 +44,10 @@ abstract contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     }
 
     /// @notice The ```setFeeReceiver``` function sets the fee receiver
-    /// @dev Only the admin can set the fee receiver
+    /// @dev Only the access control admin can set the fee receiver
     /// @param _feeReceiver The address of the fee receiver
     function setFeeReceiver(address _feeReceiver) public {
-        // Checks: Only the admin can set the fee receiver
+        // Checks: Only the access control admin can set the fee receiver
         _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
 
         // Effects: Set the fee receiver
@@ -76,7 +75,7 @@ abstract contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     }
 
     /// @notice The ```setFeeBounds``` function sets the fee bounds
-    /// @dev Only the admin can set the fee bounds
+    /// @dev Only the access control admin can set the fee bounds
     /// @param _minToken0PurchaseFee The minimum purchase fee for token0
     /// @param _maxToken0PurchaseFee The maximum purchase fee for token0
     /// @param _minToken1PurchaseFee The minimum purchase fee for token1
@@ -87,7 +86,7 @@ abstract contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         uint256 _minToken1PurchaseFee,
         uint256 _maxToken1PurchaseFee
     ) public {
-        // Checks: Only the admin can set the fee bounds
+        // Checks: Only the access control admin can set the fee bounds
         _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
 
         // Checks: Ensure the params are valid
@@ -231,7 +230,7 @@ abstract contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
     }
 
     /// @notice The ```setOraclePriceBounds``` function sets the price bounds for the pair
-    /// @dev Only the admin can set the price bounds
+    /// @dev Only the access control admin can set the price bounds
     /// @param _minBasePrice The minimum allowed initial base price
     /// @param _maxBasePrice The maximum allowed initial base price
     /// @param _minAnnualizedInterestRate The minimum allowed annualized interest rate
@@ -242,7 +241,7 @@ abstract contract AgoraStableSwapPairConfiguration is AgoraStableSwapPairCore {
         int256 _minAnnualizedInterestRate,
         int256 _maxAnnualizedInterestRate
     ) public {
-        // Checks: Only the admin can set the price bounds
+        // Checks: Only the access control admin can set the price bounds
         _requireSenderIsRole({ _role: ACCESS_CONTROL_ADMIN_ROLE });
         // Checks: parameters are valid
         if (_minBasePrice > _maxBasePrice) revert MinBasePriceGreaterThanMaxBasePrice();

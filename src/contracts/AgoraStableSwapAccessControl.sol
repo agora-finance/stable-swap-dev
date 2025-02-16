@@ -48,6 +48,7 @@ abstract contract AgoraStableSwapAccessControl is AgoraAccessControl {
         address _initialPriceSetter
     ) internal {
         _initializeAgoraAccessControl({ _initialAdminAddress: _initialAdminAddress });
+
         // Set the whitelister role
         AgoraAccessControl._addRoleToSet({ _role: WHITELISTER_ROLE });
         AgoraAccessControl._assignRole({ _role: WHITELISTER_ROLE, _newAddress: _initialWhitelister, _addRole: true });

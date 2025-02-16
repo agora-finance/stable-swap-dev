@@ -13,20 +13,22 @@ pragma solidity ^0.8.28;
 // ====================================================================
 
 import { AgoraStableSwapPairConfiguration } from "./AgoraStableSwapPairConfiguration.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 /// @notice The ```InitializeParams``` struct is used to initialize the AgoraStableSwapPair
-/// @param token0 The address of the first token in the pair
-/// @param token0Decimals The decimals of the first token in the pair
-/// @param token1 The address of the second token in the pair
-/// @param token1Decimals The decimals of the second token in the pair
-/// @param minToken0PurchaseFee The minimum purchase fee for the first token in the pair, 18 decimals precision, max value 1
-/// @param maxToken0PurchaseFee The maximum purchase fee for the first token in the pair, 18 decimals precision, max value 1
-/// @param minToken1PurchaseFee The minimum purchase fee for the second token in the pair, 18 decimals precision, max value 1
-/// @param maxToken1PurchaseFee The maximum purchase fee for the second token in the pair, 18 decimals precision, max value 1
-/// @param token0PurchaseFee The purchase fee for the first token in the pair, 18 decimals precision, max value 1
-/// @param token1PurchaseFee The purchase fee for the second token in the pair, 18 decimals precision, max value 1
+/// @param token0 The address of token0
+/// @param token0Decimals The number of decimals for token0
+/// @param token1 The address of token1
+/// @param token1Decimals The number of decimals for token1
+/// @param minToken0PurchaseFee The minimum purchase fee for token0, 18 decimals precision, max value 1
+/// @param maxToken0PurchaseFee The maximum purchase fee for token0, 18 decimals precision, max value 1
+/// @param minToken1PurchaseFee The minimum purchase fee for token1, 18 decimals precision, max value 1
+/// @param maxToken1PurchaseFee The maximum purchase fee for token1, 18 decimals precision, max value 1
+/// @param token0PurchaseFee The purchase fee for token0, 18 decimals precision, max value 1
+/// @param token1PurchaseFee The purchase fee for token1, 18 decimals precision, max value 1
 /// @param initialAdminAddress The address of the initial admin
 /// @param initialWhitelister The address of the initial whitelister
 /// @param initialFeeSetter The address of the initial fee setter
@@ -35,12 +37,12 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /// @param initialPriceSetter The address of the initial price setter
 /// @param initialTokenReceiver The address of the initial token receiver
 /// @param initialFeeReceiver The address of the initial fee receiver
-/// @param _minBasePrice The minimum base price, 18 decimals precision, max value determined by difference between decimals of token0 and token1
-/// @param _maxBasePrice The maximum base price, 18 decimals precision, max value determined by difference between decimals of token0 and token1
-/// @param _minAnnualizedInterestRate The minimum annualized interest rate, 18 decimals precision, given as number i.e. 1e16 = 1%
-/// @param _maxAnnualizedInterestRate The maximum annualized interest rate, 18 decimals precision, given as number i.e. 1e16 = 1%
-/// @param _basePrice The base price, 18 decimals precision, limited by token0 and token1 decimals
-/// @param _annualizedInterestRate The annualized interest rate, 18 decimals precision, given as number i.e. 1e16 = 1%
+/// @param minBasePrice The minimum base price for the pair, 18 decimals precision, min/max value determined by difference between decimals of token0 and token1
+/// @param maxBasePrice The maximum base price for the pair, 18 decimals precision, min/max value determined by difference between decimals of token0 and token1
+/// @param minAnnualizedInterestRate The minimum annualized interest rate for the pair, 18 decimals precision, given as number i.e. 1e16 = 1%
+/// @param maxAnnualizedInterestRate The maximum annualized interest rate for the pair, 18 decimals precision, given as number i.e. 1e16 = 1%
+/// @param basePrice The base price for the pair, 18 decimals precision, limited by token0 and token1 decimals
+/// @param annualizedInterestRate The annualized interest rate for the pair, 18 decimals precision, given as number i.e. 1e16 = 1%
 struct InitializeParams {
     address token0;
     uint8 token0Decimals;
@@ -69,7 +71,7 @@ struct InitializeParams {
 }
 
 /// @title AgoraStableSwapPair
-/// @notice The AgoraStableSwapPair is a contract that manages the core logic for the AgoraStableSwapPair
+/// @notice The AgoraStableSwapPair allows whitelisted users to swap between two tokens with a fixed price
 /// @author Agora
 contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     using SafeCast for uint256;
@@ -151,8 +153,14 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     }
 
     //==============================================================================
-    //  View Functions
+    //  SwapStorage View Functions
     //==============================================================================
+
+    /// @notice The ```isPaused``` function returns whether the pair is paused
+    /// @return _isPaused Whether the pair is paused
+    function isPaused() public view returns (bool) {
+        return _getPointerToStorage().swapStorage.isPaused;
+    }
 
     /// @notice The ```token0``` function returns the address of the token0 in the pair
     /// @return _token0 The address of the token0 in the pair
@@ -160,40 +168,10 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().swapStorage.token0;
     }
 
-    /// @notice The ```token0Decimals``` function returns the decimals of the token0 in the pair
-    /// @return _token0Decimals The decimals of the token0 in the pair
-    function token0Decimals() public view returns (uint8) {
-        return _getPointerToStorage().configStorage.token0Decimals;
-    }
-
     /// @notice The ```token1``` function returns the address of the token1 in the pair
     /// @return _token1 The address of the token1 in the pair
     function token1() public view returns (address) {
         return _getPointerToStorage().swapStorage.token1;
-    }
-
-    /// @notice The ```token1Decimals``` function returns the decimals of the token1 in the pair
-    /// @return _token1Decimals The decimals of the token1 in the pair
-    function token1Decimals() public view returns (uint8) {
-        return _getPointerToStorage().configStorage.token1Decimals;
-    }
-
-    /// @notice The ```token0PurchaseFee``` function returns the purchase fee for the token0 in the pair
-    /// @return _token0PurchaseFee The purchase fee for the token0 in the pair
-    function token0PurchaseFee() public view returns (uint256) {
-        return _getPointerToStorage().swapStorage.token0PurchaseFee;
-    }
-
-    /// @notice The ```token1PurchaseFee``` function returns the purchase fee for the token1 in the pair
-    /// @return _token1PurchaseFee The purchase fee for the token1 in the pair
-    function token1PurchaseFee() public view returns (uint256) {
-        return _getPointerToStorage().swapStorage.token1PurchaseFee;
-    }
-
-    /// @notice The ```isPaused``` function returns whether the pair is paused
-    /// @return _isPaused Whether the pair is paused
-    function isPaused() public view returns (bool) {
-        return _getPointerToStorage().swapStorage.isPaused;
     }
 
     /// @notice The ```reserve0``` function returns the reserve of the token0 in the pair
@@ -206,6 +184,18 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     /// @return _reserve1 The reserve of the token1 in the pair
     function reserve1() public view returns (uint256) {
         return _getPointerToStorage().swapStorage.reserve1;
+    }
+
+    /// @notice The ```token0PurchaseFee``` function returns the purchase fee for the token0 in the pair
+    /// @return _token0PurchaseFee The purchase fee for the token0 in the pair
+    function token0PurchaseFee() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.token0PurchaseFee;
+    }
+
+    /// @notice The ```token1PurchaseFee``` function returns the purchase fee for the token1 in the pair
+    /// @return _token1PurchaseFee The purchase fee for the token1 in the pair
+    function token1PurchaseFee() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.token1PurchaseFee;
     }
 
     /// @notice The ```priceLastUpdated``` function returns the timestamp when the price was updated
@@ -225,6 +215,22 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
     function basePrice() public view returns (uint256) {
         return _getPointerToStorage().swapStorage.basePrice;
     }
+
+    /// @notice The ```token0FeesAccumulated``` function returns the accumulated fees for token0
+    /// @return _token0FeesAccumulated The accumulated fees for token0
+    function token0FeesAccumulated() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.token0FeesAccumulated;
+    }
+
+    /// @notice The ```token1FeesAccumulated``` function returns the accumulated fees for token1
+    /// @return _token1FeesAccumulated The accumulated fees for token1
+    function token1FeesAccumulated() public view returns (uint256) {
+        return _getPointerToStorage().swapStorage.token1FeesAccumulated;
+    }
+
+    //==============================================================================
+    //  ConfigStorage View Functions
+    //==============================================================================
 
     /// @notice The ```minToken0PurchaseFee``` function returns the minimum purchase fee for token0
     /// @return _minToken0PurchaseFee The minimum purchase fee for token0
@@ -256,6 +262,12 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().configStorage.tokenReceiverAddress;
     }
 
+    /// @notice The ```feeReceiverAddress``` function returns the address of the fee receiver
+    /// @return _feeReceiverAddress The address of the fee receiver
+    function feeReceiverAddress() public view returns (address) {
+        return _getPointerToStorage().configStorage.feeReceiverAddress;
+    }
+
     /// @notice The ```minBasePrice``` function returns the minimum base price
     /// @return _minBasePrice The minimum base price
     function minBasePrice() public view returns (uint256) {
@@ -280,23 +292,21 @@ contract AgoraStableSwapPair is AgoraStableSwapPairConfiguration {
         return _getPointerToStorage().configStorage.maxAnnualizedInterestRate;
     }
 
-    /// @notice The ```token0FeesAccumulated``` function returns the accumulated fees for token0
-    /// @return _token0FeesAccumulated The accumulated fees for token0
-    function token0FeesAccumulated() public view returns (uint256) {
-        return _getPointerToStorage().swapStorage.token0FeesAccumulated;
+    /// @notice The ```token0Decimals``` function returns the decimals of the token0 in the pair
+    /// @return _token0Decimals The decimals of the token0 in the pair
+    function token0Decimals() public view returns (uint8) {
+        return _getPointerToStorage().configStorage.token0Decimals;
     }
 
-    /// @notice The ```token1FeesAccumulated``` function returns the accumulated fees for token1
-    /// @return _token1FeesAccumulated The accumulated fees for token1
-    function token1FeesAccumulated() public view returns (uint256) {
-        return _getPointerToStorage().swapStorage.token1FeesAccumulated;
+    /// @notice The ```token1Decimals``` function returns the decimals of the token1 in the pair
+    /// @return _token1Decimals The decimals of the token1 in the pair
+    function token1Decimals() public view returns (uint8) {
+        return _getPointerToStorage().configStorage.token1Decimals;
     }
 
-    /// @notice The ```feeReceiverAddress``` function returns the address of the fee receiver
-    /// @return _feeReceiverAddress The address of the fee receiver
-    function feeReceiverAddress() public view returns (address) {
-        return _getPointerToStorage().configStorage.feeReceiverAddress;
-    }
+    //==============================================================================
+    // View Functions
+    //==============================================================================
 
     /// @notice The ```getAmountsOut``` function calculates the amount of tokenOut returned from a given amount of tokenIn
     /// @param _amountIn The amount of input tokenIn
