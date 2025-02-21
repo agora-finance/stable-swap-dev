@@ -30,3 +30,7 @@ To set up the project locally, follow these steps:
 ### Key Contracts and their inheritance
 ![Key Contracts and their inheritance](docs/_images/inheritance.jpg)
 
+## Running Halmos
+
+- [Install Halmos](https://github.com/a16z/halmos/tree/main?tab=readme-ov-file#installation)
+- Run `halmos` in the root directory

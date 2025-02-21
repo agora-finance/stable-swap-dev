@@ -1,3 +1,6 @@
 [submodule "lib/agora-standard-solidity"]
 	path = lib/agora-standard-solidity
 	url = https://github.com/agora-finance/agora-standard-solidity
+[submodule "lib/halmos-cheatcodes"]
+	path = lib/halmos-cheatcodes
+	url = https://github.com/a16z/halmos-cheatcodes
